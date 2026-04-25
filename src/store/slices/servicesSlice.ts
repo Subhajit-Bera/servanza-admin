@@ -129,6 +129,25 @@ export const uploadServiceImage = createAsyncThunk(
     }
 );
 
+// Upload multiple service images
+export const uploadServiceImages = createAsyncThunk(
+    'services/uploadServiceImages',
+    async ({ serviceId, files }: { serviceId: string; files: File[] }, { rejectWithValue }) => {
+        try {
+            const formData = new FormData();
+            files.forEach((file) => {
+                formData.append('images', file);
+            });
+            const response = await client.post<any>(`/services/${serviceId}/images`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            return { serviceId, imageUrls: response.data.data?.imageUrls || response.data.imageUrls };
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to upload service images');
+        }
+    }
+);
+
 // Upload category icon
 export const uploadCategoryIcon = createAsyncThunk(
     'services/uploadCategoryIcon',
@@ -238,11 +257,19 @@ const servicesSlice = createSlice({
                 state.services = state.services.filter(s => s.id !== action.payload);
             })
 
-            // Upload Service Image
+            // Upload Service Image (Single)
             .addCase(uploadServiceImage.fulfilled, (state, action) => {
                 const index = state.services.findIndex(s => s.id === action.payload.serviceId);
                 if (index !== -1) {
                     state.services[index].imageUrl = action.payload.imageUrl;
+                }
+            })
+
+            // Upload Service Images (Multiple)
+            .addCase(uploadServiceImages.fulfilled, (state, action) => {
+                const index = state.services.findIndex(s => s.id === action.payload.serviceId);
+                if (index !== -1) {
+                    state.services[index].imageUrls = action.payload.imageUrls;
                 }
             })
 

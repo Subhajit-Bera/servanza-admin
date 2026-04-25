@@ -186,19 +186,29 @@ const ServiceDetailsPage: React.FC = () => {
             <Grid container spacing={3}>
                 {/* Main Content */}
                 <Grid size={{ xs: 12, md: 8 }}>
-                    {/* Service Image */}
-                    {service.image && (
-                        <Paper sx={{ mb: 3, overflow: 'hidden', borderRadius: 2, boxShadow: SHADOWS.light }}>
-                            <Box
-                                component="img"
-                                src={service.image}
-                                alt={service.title}
-                                sx={{
-                                    width: '100%',
-                                    height: 300,
-                                    objectFit: 'cover',
-                                }}
-                            />
+                    {/* Service Images */}
+                    {(service.imageUrls?.length > 0 || service.imageUrl) && (
+                        <Paper sx={{ mb: 3, p: 2, borderRadius: 2, boxShadow: SHADOWS.light }}>
+                            <Typography variant="h6" fontWeight={600} gutterBottom>
+                                Service Images
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
+                                {(service.imageUrls?.length > 0 ? service.imageUrls : [service.imageUrl]).map((url: string, index: number) => (
+                                    <Box
+                                        key={index}
+                                        component="img"
+                                        src={url}
+                                        alt={`${service.title} ${index + 1}`}
+                                        sx={{
+                                            width: 250,
+                                            height: 180,
+                                            objectFit: 'cover',
+                                            borderRadius: 2,
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                ))}
+                            </Box>
                         </Paper>
                     )}
 

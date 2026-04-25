@@ -25,7 +25,7 @@ import {
     Delete as DeleteIcon,
 } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchCategories, createService, uploadServiceImage } from '../../store/slices/servicesSlice';
+import { fetchCategories, createService, uploadServiceImages } from '../../store/slices/servicesSlice';
 import { SHADOWS, COLORS } from '../../theme';
 import { useNavigate } from 'react-router-dom';
 import type { CreateServicePayload, ServiceDescription } from '../../api/types';
@@ -55,8 +55,8 @@ const CreateServicePage: React.FC = () => {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [submitting, setSubmitting] = useState(false);
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<{ file: File; preview: string }[]>([]);
 
     useEffect(() => {
         dispatch(fetchCategories());
@@ -86,23 +86,27 @@ const CreateServicePage: React.FC = () => {
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setSelectedFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            setSelectedFiles((prev) => [...prev, ...files]);
 
-    const handleRemoveImage = () => {
-        setSelectedFile(null);
-        setImagePreview(null);
+            files.forEach((file) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImagePreviews((prev) => [...prev, { file, preview: reader.result as string }]);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        // Reset input value so same files can be selected again if needed
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
+    };
+
+    const handleRemoveImage = (indexToRemove: number) => {
+        setSelectedFiles((prev) => prev.filter((_, i) => i !== indexToRemove));
+        setImagePreviews((prev) => prev.filter((_, i) => i !== indexToRemove));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -115,10 +119,10 @@ const CreateServicePage: React.FC = () => {
             const result = await dispatch(createService(formData)).unwrap();
             const serviceId = result?.data?.id || result?.id;
 
-            // Upload image if selected
-            if (selectedFile && serviceId) {
+            // Upload images if selected
+            if (selectedFiles.length > 0 && serviceId) {
                 try {
-                    await dispatch(uploadServiceImage({ serviceId, file: selectedFile })).unwrap();
+                    await dispatch(uploadServiceImages({ serviceId, files: selectedFiles })).unwrap();
                 } catch (imgError) {
                     console.error('Image upload failed:', imgError);
                     // Continue - service was created successfully
@@ -265,78 +269,83 @@ const CreateServicePage: React.FC = () => {
 
                             {/* Image Upload */}
                             <Box>
-                                <Typography variant="subtitle2" sx={{ mb: 1 }}>Service Image</Typography>
+                                <Typography variant="subtitle2" sx={{ mb: 1 }}>Service Images</Typography>
                                 <input
                                     type="file"
                                     accept="image/*"
+                                    multiple
                                     ref={fileInputRef}
                                     onChange={handleImageUpload}
                                     style={{ display: 'none' }}
                                 />
-                                {imagePreview ? (
-                                    <Paper
-                                        variant="outlined"
-                                        sx={{
-                                            p: 2,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 2,
-                                            bgcolor: COLORS.offWhite
-                                        }}
-                                    >
-                                        <Box
-                                            component="img"
-                                            src={imagePreview}
-                                            alt="Preview"
-                                            sx={{
-                                                width: 120,
-                                                height: 80,
-                                                objectFit: 'cover',
-                                                borderRadius: 1,
-                                            }}
-                                        />
-                                        <Box sx={{ flex: 1 }}>
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {selectedFile?.name}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {selectedFile && `${(selectedFile.size / 1024).toFixed(1)} KB`}
-                                            </Typography>
-                                        </Box>
-                                        <Button
-                                            color="error"
-                                            size="small"
-                                            startIcon={<DeleteIcon />}
-                                            onClick={handleRemoveImage}
-                                        >
-                                            Remove
-                                        </Button>
-                                    </Paper>
-                                ) : (
-                                    <Paper
-                                        variant="outlined"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        sx={{
-                                            p: 4,
-                                            textAlign: 'center',
-                                            cursor: 'pointer',
-                                            bgcolor: COLORS.offWhite,
-                                            border: `2px dashed ${COLORS.border}`,
-                                            '&:hover': {
-                                                borderColor: COLORS.primary,
-                                                bgcolor: 'rgba(34, 197, 94, 0.05)',
-                                            },
-                                        }}
-                                    >
-                                        <CloudUploadIcon sx={{ fontSize: 48, color: COLORS.primary, mb: 1 }} />
-                                        <Typography variant="body1" fontWeight={600}>
-                                            Click to upload image
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            PNG, JPG up to 5MB
-                                        </Typography>
-                                    </Paper>
+                                {imagePreviews.length > 0 && (
+                                    <Stack spacing={2} sx={{ mb: 2 }}>
+                                        {imagePreviews.map((item, index) => (
+                                            <Paper
+                                                key={index}
+                                                variant="outlined"
+                                                sx={{
+                                                    p: 2,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 2,
+                                                    bgcolor: COLORS.offWhite
+                                                }}
+                                            >
+                                                <Box
+                                                    component="img"
+                                                    src={item.preview}
+                                                    alt={`Preview ${index + 1}`}
+                                                    sx={{
+                                                        width: 80,
+                                                        height: 80,
+                                                        objectFit: 'cover',
+                                                        borderRadius: 1,
+                                                    }}
+                                                />
+                                                <Box sx={{ flex: 1 }}>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {item.file.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {(item.file.size / 1024).toFixed(1)} KB
+                                                    </Typography>
+                                                </Box>
+                                                <Button
+                                                    color="error"
+                                                    size="small"
+                                                    startIcon={<DeleteIcon />}
+                                                    onClick={() => handleRemoveImage(index)}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            </Paper>
+                                        ))}
+                                    </Stack>
                                 )}
+                                <Paper
+                                    variant="outlined"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    sx={{
+                                        p: 4,
+                                        textAlign: 'center',
+                                        cursor: 'pointer',
+                                        bgcolor: COLORS.offWhite,
+                                        border: `2px dashed ${COLORS.border}`,
+                                        '&:hover': {
+                                            borderColor: COLORS.primary,
+                                            bgcolor: 'rgba(34, 197, 94, 0.05)',
+                                        },
+                                    }}
+                                >
+                                    <CloudUploadIcon sx={{ fontSize: 48, color: COLORS.primary, mb: 1 }} />
+                                    <Typography variant="body1" fontWeight={600}>
+                                        {imagePreviews.length > 0 ? 'Click to add more images' : 'Click to upload images'}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        PNG, JPG up to 5MB each
+                                    </Typography>
+                                </Paper>
                             </Box>
 
                             <FormControl fullWidth error={!!errors.categoryId} required>

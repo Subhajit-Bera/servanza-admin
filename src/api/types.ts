@@ -242,6 +242,7 @@ export interface Service {
     categoryId: string;
     category?: Category;
     imageUrl?: string;
+    imageUrls?: string[];
     isActive: boolean;
     createdAt?: string;
 }
