@@ -45,7 +45,12 @@ import type { Transaction } from '../../store/slices/transactionsSlice';
 import { COLORS } from '../../theme';
 import dayjs from 'dayjs';
 
-const TransactionsPage: React.FC = () => {
+interface TransactionsPageProps {
+    initialStatus?: string;
+    title?: string;
+}
+
+const TransactionsPage: React.FC<TransactionsPageProps> = ({ initialStatus = '', title = 'Transactions' }) => {
     const dispatch = useAppDispatch();
     const transactions = useAppSelector(selectTransactions);
     const loading = useAppSelector(selectTransactionsLoading);
@@ -53,7 +58,7 @@ const TransactionsPage: React.FC = () => {
 
     // Filters
     const [search, setSearch] = useState('');
-    const [status, setStatus] = useState('');
+    const [status, setStatus] = useState(initialStatus);
     const [method, setMethod] = useState('');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(20);
@@ -64,6 +69,13 @@ const TransactionsPage: React.FC = () => {
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
     const [refundAmount, setRefundAmount] = useState('');
     const [refundReason, setRefundReason] = useState('');
+
+    useEffect(() => {
+        setStatus(initialStatus);
+        setSearch('');
+        setMethod('');
+        setPage(0);
+    }, [initialStatus]);
 
     useEffect(() => {
         loadTransactions();
@@ -126,7 +138,7 @@ const TransactionsPage: React.FC = () => {
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h1">Transactions</Typography>
+                <Typography variant="h1">{title}</Typography>
                 <Button
                     variant="outlined"
                     startIcon={<RefreshIcon />}

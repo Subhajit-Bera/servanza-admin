@@ -41,7 +41,6 @@ const BookingsPage = () => {
     const TABS = [
         { value: 'ALL', label: 'All' },
         { value: 'PENDING', label: 'Pending' },
-        { value: 'CONFIRMED', label: 'Confirmed' },
         { value: 'IN_PROGRESS', label: 'In Progress' },
         { value: 'COMPLETED', label: 'Completed' },
         { value: 'CANCELLED', label: 'Cancelled' },
@@ -74,7 +73,6 @@ const BookingsPage = () => {
         switch (status) {
             case 'COMPLETED': return 'success';
             case 'IN_PROGRESS': return 'info';
-            case 'CONFIRMED': return 'primary';
             case 'PENDING': return 'warning';
             case 'ESCALATED': return 'error';
             case 'CANCELLED': return 'default';

@@ -1,43 +1,44 @@
 import { createTheme } from '@mui/material/styles';
 
-// Servanza Brand Colors (Consistent with Mobile Apps)
+// Servanza Brand Colors — Muted Teal / Sage + Warm Rust
+// Synced with servanza-customer theme
 export const COLORS = {
     // Primary Brand
-    primary: '#2ECC71',
-    darkGreen: '#27AE60',
-    lightGreen: '#A8E6CF',
+    primary: '#47855f',       // muted-teal-600
+    darkGreen: '#366347',     // muted-teal-700
+    lightGreen: '#eef6f1',    // muted-teal-50
 
     // Accent
-    accent: '#FF6B6B',
+    accent: '#E17A5E',        // Warm Rust / Terracotta
 
     // Neutrals
     white: '#FFFFFF',
-    offWhite: '#F8F9FA',
-    lightGray: '#E9ECEF',
-    mediumGray: '#ADB5BD',
-    darkGray: '#495057',
-    charcoal: '#212529',
+    offWhite: '#FAFAFA',
+    lightGray: '#deede4',     // muted-teal-100
+    mediumGray: '#7ab892',    // muted-teal-400
+    darkGray: '#366347',      // muted-teal-700
+    charcoal: '#122118',      // muted-teal-900
 
     // UI
-    bgLight: '#F8F9FA',
-    border: '#E9ECEF',
+    bgLight: '#FAFAFA',
+    border: '#deede4',        // muted-teal-100
 
     // Status
-    success: '#2ECC71',
-    warning: '#F39C12',
-    error: '#E74C3C',
-    info: '#3498DB',
-    pending: '#F39C12',
-    completed: '#27AE60',
-    cancelled: '#E74C3C',
+    success: '#59a677',       // muted-teal-500
+    warning: '#F59E0B',
+    error: '#EF4444',
+    info: '#3B82F6',
+    pending: '#F59E0B',
+    completed: '#366347',     // muted-teal-700
+    cancelled: '#EF4444',
 };
 
 // Shadow System
 export const SHADOWS = {
-    light: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    medium: '0 4px 8px rgba(0, 0, 0, 0.15)',
-    heavy: '0 8px 16px rgba(0, 0, 0, 0.2)',
-    green: '0 4px 8px rgba(46, 204, 113, 0.3)',
+    light: '0 2px 4px rgba(0, 0, 0, 0.08)',
+    medium: '0 4px 8px rgba(0, 0, 0, 0.12)',
+    heavy: '0 8px 16px rgba(0, 0, 0, 0.18)',
+    green: '0 4px 8px rgba(71, 133, 95, 0.28)',
 };
 
 // Create MUI Theme

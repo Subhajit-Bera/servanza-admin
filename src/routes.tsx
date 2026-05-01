@@ -122,7 +122,7 @@ export const router = createBrowserRouter([
                     },
                     {
                         path: '/payments/refunds',
-                        element: <RequirePermission permission="payments.refund"><TransactionsPage /></RequirePermission>
+                        element: <RequirePermission permission="payments.refund"><TransactionsPage initialStatus="REFUNDED" title="Refunds" /></RequirePermission>
                     },
                     {
                         path: '/payments/payouts',

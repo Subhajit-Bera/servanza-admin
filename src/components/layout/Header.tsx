@@ -20,10 +20,8 @@ import {
 import {
     Search as SearchIcon,
     Notifications as NotificationsIcon,
-    Add as AddIcon,
     KeyboardArrowDown as ArrowDownIcon,
     Person as PersonIcon,
-    Settings as SettingsIcon,
     Logout as LogoutIcon,
     Warning as WarningIcon,
     PersonAdd as PersonAddIcon,
@@ -64,7 +62,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarWidth }) => {
     const { user } = useAppSelector((state) => state.auth);
 
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-    const [quickActionsAnchor, setQuickActionsAnchor] = React.useState<null | HTMLElement>(null);
+    // const [quickActionsAnchor, setQuickActionsAnchor] = React.useState<null | HTMLElement>(null);
     const [notificationsAnchor, setNotificationsAnchor] = React.useState<null | HTMLElement>(null);
 
     // Real notification state
@@ -147,12 +145,12 @@ const Header: React.FC<HeaderProps> = ({ sidebarWidth }) => {
         }
     };
 
-    const quickActions = [
-        { label: 'Create Booking', path: '/bookings/create' },
-        { label: 'Add Customer', path: '/customers/create' },
-        { label: 'Add Buddy', path: '/buddies/create' },
-        { label: 'Create Service', path: '/services/create' },
-    ];
+    // const quickActions = [
+    //     { label: 'Create Booking', path: '/bookings/create' },
+    //     { label: 'Add Customer', path: '/customers/create' },
+    //     { label: 'Add Buddy', path: '/buddies/create' },
+    //     { label: 'Create Service', path: '/services/create' },
+    // ];
 
     return (
         <AppBar
@@ -233,7 +231,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarWidth }) => {
                 {/* Right Section - Actions */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {/* Quick Actions */}
-                    <IconButton
+                    {/* <IconButton
                         onClick={(e) => setQuickActionsAnchor(e.currentTarget)}
                         sx={{
                             backgroundColor: COLORS.primary,
@@ -262,7 +260,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarWidth }) => {
                                 {action.label}
                             </MenuItem>
                         ))}
-                    </Menu>
+                    </Menu> */}
 
                     {/* Notifications */}
                     <IconButton
@@ -365,11 +363,11 @@ const Header: React.FC<HeaderProps> = ({ sidebarWidth }) => {
                         </Avatar>
                         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
                             <Typography variant="body2" fontWeight={600} color={COLORS.charcoal}>
-                                {user?.name || 'Admin'}
+                                {user?.name}
                             </Typography>
-                            <Typography variant="caption" color={COLORS.mediumGray}>
+                            {/* <Typography variant="caption" color={COLORS.mediumGray}>
                                 {user?.role?.replace('_', ' ') || 'Super Admin'}
-                            </Typography>
+                            </Typography> */}
                         </Box>
                         <ArrowDownIcon fontSize="small" sx={{ color: COLORS.mediumGray }} />
                     </Box>
@@ -383,10 +381,10 @@ const Header: React.FC<HeaderProps> = ({ sidebarWidth }) => {
                             <PersonIcon fontSize="small" sx={{ mr: 1, color: COLORS.darkGray }} />
                             My Profile
                         </MenuItem>
-                        <MenuItem onClick={() => { navigate('/settings'); setAnchorEl(null); }}>
+                        {/* <MenuItem onClick={() => { navigate('/settings'); setAnchorEl(null); }}>
                             <SettingsIcon fontSize="small" sx={{ mr: 1, color: COLORS.darkGray }} />
                             Settings
-                        </MenuItem>
+                        </MenuItem> */}
                         <Divider />
                         <MenuItem onClick={handleLogout} sx={{ color: COLORS.error }}>
                             <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
