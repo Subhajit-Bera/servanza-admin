@@ -47,10 +47,13 @@ const CreateServicePage: React.FC = () => {
             productsNeededFromCustomer: []
         },
         basePrice: 0,
+        employeePayout: 0,
+        cmpPayout: 0,
         discountedPrice: undefined,
         durationMins: 60,
         categoryId: '',
         isActive: true,
+        isInstant: false,
     });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -73,6 +76,15 @@ const CreateServicePage: React.FC = () => {
         }
         if (!formData.basePrice || formData.basePrice <= 0) {
             newErrors.basePrice = 'Price must be greater than 0';
+        }
+        if (formData.employeePayout === undefined || formData.employeePayout < 0) {
+            newErrors.employeePayout = 'Employee payout cannot be negative';
+        }
+        if (formData.cmpPayout === undefined || formData.cmpPayout < 0) {
+            newErrors.cmpPayout = 'Our payout cannot be negative';
+        }
+        if (formData.basePrice > 0 && formData.employeePayout + formData.cmpPayout !== formData.basePrice) {
+            newErrors.payoutSum = 'Employee Payout + Our Payout must equal Base Price';
         }
         if (!formData.durationMins || formData.durationMins <= 0) {
             newErrors.durationMins = 'Duration must be greater than 0';
@@ -401,6 +413,44 @@ const CreateServicePage: React.FC = () => {
                                 />
                             </Stack>
 
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
+                                <TextField
+                                    label="Employee Payout"
+                                    type="number"
+                                    value={formData.employeePayout}
+                                    onChange={(e) => handleChange('employeePayout', parseFloat(e.target.value) || 0)}
+                                    error={!!errors.employeePayout || !!errors.payoutSum}
+                                    helperText={errors.employeePayout}
+                                    fullWidth
+                                    required
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                        },
+                                    }}
+                                />
+                                <TextField
+                                    label="Our Payout"
+                                    type="number"
+                                    value={formData.cmpPayout}
+                                    onChange={(e) => handleChange('cmpPayout', parseFloat(e.target.value) || 0)}
+                                    error={!!errors.cmpPayout || !!errors.payoutSum}
+                                    helperText={errors.cmpPayout}
+                                    fullWidth
+                                    required
+                                    slotProps={{
+                                        input: {
+                                            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                                        },
+                                    }}
+                                />
+                            </Stack>
+                            {errors.payoutSum && (
+                                <Typography color="error" variant="caption" sx={{ mt: -2, ml: 2 }}>
+                                    {errors.payoutSum}
+                                </Typography>
+                            )}
+
                             <TextField
                                 label="Duration"
                                 type="number"
@@ -426,6 +476,17 @@ const CreateServicePage: React.FC = () => {
                                     />
                                 }
                                 label="Active (visible to customers)"
+                            />
+
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={formData.isInstant}
+                                        onChange={(e) => handleChange('isInstant', e.target.checked)}
+                                        color="primary"
+                                    />
+                                }
+                                label="Is Instant Service (Auto-dispatches immediately)"
                             />
 
                             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>

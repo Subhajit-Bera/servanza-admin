@@ -20,7 +20,9 @@ import {
     TextField,
     MenuItem,
     Stack,
-    Avatar
+    Avatar,
+    FormControlLabel,
+    Switch
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -102,7 +104,7 @@ const ServicesPage = () => {
     const handleAddService = () => {
         setModalType('SERVICE');
         setEditingItem(null);
-        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', durationMins: '', categoryId: '', imageUrl: '' });
+        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, durationMins: '', categoryId: '', imageUrl: '' });
         setImagePreview(null);
         setSelectedFile(null);
         setOpenModal(true);
@@ -111,7 +113,7 @@ const ServicesPage = () => {
     const handleAddCategory = () => {
         setModalType('CATEGORY');
         setEditingItem(null);
-        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', durationMins: '', categoryId: '', imageUrl: '' });
+        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, durationMins: '', categoryId: '', imageUrl: '' });
         setImagePreview(null);
         setSelectedFile(null);
         setOpenModal(true);
@@ -134,6 +136,9 @@ const ServicesPage = () => {
                 productsNeededFromCustomer: descObj.productsNeededFromCustomer || []
             },
             basePrice: service.basePrice?.toString() || '',
+            employeePayout: service.employeePayout?.toString() || '',
+            cmpPayout: service.cmpPayout?.toString() || '',
+            isInstant: service.isInstant || false,
             durationMins: service.durationMins?.toString() || '',
             categoryId: service.categoryId || '',
             imageUrl: service.imageUrl || ''
@@ -151,6 +156,9 @@ const ServicesPage = () => {
             description: category.description || '',
             descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] },
             basePrice: '',
+            employeePayout: '',
+            cmpPayout: '',
+            isInstant: false,
             durationMins: '',
             categoryId: '',
             imageUrl: category.icon || ''
@@ -178,6 +186,9 @@ const ServicesPage = () => {
             productsNeededFromCustomer: [] as string[],
         },
         basePrice: '',
+        employeePayout: '',
+        cmpPayout: '',
+        isInstant: false,
         durationMins: '',
         categoryId: '',
         imageUrl: ''
@@ -234,6 +245,9 @@ const ServicesPage = () => {
                     title: formData.title,
                     categoryId: formData.categoryId,
                     basePrice: Number(formData.basePrice) || 1,
+                    employeePayout: Number(formData.employeePayout) || 0,
+                    cmpPayout: Number(formData.cmpPayout) || 0,
+                    isInstant: formData.isInstant || false,
                     durationMins: Number(formData.durationMins) || 15,
                     isActive: true,
                     description: formData.descriptionObj
@@ -278,7 +292,7 @@ const ServicesPage = () => {
             setIsSubmitting(false);
         }
         handleCloseModal();
-        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', durationMins: '', categoryId: '', imageUrl: '' });
+        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, durationMins: '', categoryId: '', imageUrl: '' });
         setSelectedFile(null);
     };
 
@@ -495,6 +509,36 @@ const ServicesPage = () => {
                                     value={formData.basePrice}
                                     onChange={handleInputChange}
                                     inputProps={{ min: 0 }}
+                                />
+                                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                                    <TextField
+                                        label="Employee Payout (₹)"
+                                        name="employeePayout"
+                                        type="number"
+                                        fullWidth
+                                        value={formData.employeePayout}
+                                        onChange={handleInputChange}
+                                        inputProps={{ min: 0 }}
+                                    />
+                                    <TextField
+                                        name="cmpPayout"
+                                        label="Our Payout"
+                                        type="number"
+                                        fullWidth
+                                        value={formData.cmpPayout}
+                                        onChange={handleInputChange}
+                                        inputProps={{ min: 0 }}
+                                    />
+                                </Stack>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={formData.isInstant}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, isInstant: e.target.checked }))}
+                                            color="primary"
+                                        />
+                                    }
+                                    label="Is Instant Service"
                                 />
                                 <TextField
                                     label="Duration (mins)"

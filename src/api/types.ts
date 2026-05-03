@@ -237,6 +237,9 @@ export interface Service {
     title: string;
     description?: ServiceDescription | null;
     basePrice: number;
+    employeePayout: number;
+    cmpPayout: number;
+    isInstant: boolean;
     discountedPrice?: number;
     durationMins: number; // in minutes
     categoryId: string;
@@ -264,6 +267,8 @@ export interface Booking {
     taxAmount: number;
     discountAmount: number;
     totalAmount: number;
+    employeePayout: number;
+    cmpPayout: number;
     currency: string;
     specialInstructions?: string;
 
@@ -315,6 +320,9 @@ export interface CreateServicePayload {
     title: string;
     description?: ServiceDescription | string;
     basePrice: number;
+    employeePayout: number;
+    cmpPayout: number;
+    isInstant: boolean;
     discountedPrice?: number;
     durationMins: number;
     categoryId: string;
