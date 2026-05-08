@@ -30,6 +30,7 @@ import {
     ExpandLess,
     ExpandMore,
     Logout as LogoutIcon,
+    Campaign as CampaignIcon,
 } from '@mui/icons-material';
 import { COLORS } from '../../theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -126,6 +127,12 @@ const menuItems: MenuItem[] = [
         icon: <MapIcon />,
         path: '/tracking',
         permissions: ['buddies.view']
+    },
+    {
+        title: 'Promotions',
+        icon: <CampaignIcon />,
+        path: '/promotions',
+        permissions: ['services.create']
     },
     {
         title: 'Reports',

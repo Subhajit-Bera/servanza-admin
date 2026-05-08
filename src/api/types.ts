@@ -343,3 +343,33 @@ export interface BuddyVerificationPayload {
     comment?: string;
 }
 
+// Promotion Types
+
+export interface Promotion {
+    id: string;
+    title: string;
+    subtitle?: string;
+    imageUrl: string;
+    ctaLabel?: string;
+    ctaLink?: string;
+    displayOrder: number;
+    isActive: boolean;
+    startDate?: string;
+    endDate?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreatePromotionPayload {
+    title: string;
+    subtitle?: string;
+    imageUrl?: string;
+    ctaLabel?: string;
+    ctaLink?: string;
+    displayOrder?: number;
+    isActive?: boolean;
+    startDate?: string | null;
+    endDate?: string | null;
+}
+
+export interface UpdatePromotionPayload extends Partial<CreatePromotionPayload> {}

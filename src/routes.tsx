@@ -29,6 +29,7 @@ import AdminsPage from './features/settings/AdminsPage';
 import RolePermissionsPage from './features/settings/RolePermissionsPage';
 import ProfilePage from './features/profile/ProfilePage';
 import NotificationsPage from './features/notifications/NotificationsPage';
+import PromotionsPage from './features/promotions/PromotionsPage';
 
 export const router = createBrowserRouter([
     // Public routes
@@ -168,6 +169,12 @@ export const router = createBrowserRouter([
 
                     // Notifications
                     { path: '/notifications', element: <NotificationsPage /> },
+
+                    // Promotions
+                    {
+                        path: '/promotions',
+                        element: <RequirePermission permission="services.create"><PromotionsPage /></RequirePermission>
+                    },
                 ],
             },
         ],

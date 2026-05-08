@@ -22,17 +22,19 @@ import {
     Stack,
     Avatar,
     FormControlLabel,
-    Switch
+    Switch,
+    Tooltip,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
-    CloudUpload as CloudUploadIcon
+    CloudUpload as CloudUploadIcon,
+    ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
-import { fetchServices, fetchCategories, createService, createCategory, updateService, updateCategory, uploadServiceImage, uploadCategoryIcon } from '../../store/slices/servicesSlice';
+import { fetchServices, fetchCategories, createService, createCategory, updateService, updateCategory, uploadServiceImages, uploadCategoryIcon } from '../../store/slices/servicesSlice';
 import { COLORS } from '../../theme/theme';
 import type { Service, Category } from '../../api/types';
 import { PermissionGate } from '../../components/common/PermissionGate';
@@ -88,6 +90,10 @@ const ServicesPage = () => {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // Multi-image support for services
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [imagePreviews, setImagePreviews] = useState<{ file: File; preview: string }[]>([]);
+    const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]);
 
     // File input ref
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,18 +110,24 @@ const ServicesPage = () => {
     const handleAddService = () => {
         setModalType('SERVICE');
         setEditingItem(null);
-        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, durationMins: '', categoryId: '', imageUrl: '' });
+        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, isActive: true, durationMins: '', categoryId: '', imageUrl: '' });
         setImagePreview(null);
         setSelectedFile(null);
+        setSelectedFiles([]);
+        setImagePreviews([]);
+        setExistingImageUrls([]);
         setOpenModal(true);
     };
 
     const handleAddCategory = () => {
         setModalType('CATEGORY');
         setEditingItem(null);
-        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, durationMins: '', categoryId: '', imageUrl: '' });
+        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, isActive: true, durationMins: '', categoryId: '', imageUrl: '' });
         setImagePreview(null);
         setSelectedFile(null);
+        setSelectedFiles([]);
+        setImagePreviews([]);
+        setExistingImageUrls([]);
         setOpenModal(true);
     };
 
@@ -139,11 +151,15 @@ const ServicesPage = () => {
             employeePayout: service.employeePayout?.toString() || '',
             cmpPayout: service.cmpPayout?.toString() || '',
             isInstant: service.isInstant || false,
+            isActive: service.isActive !== undefined ? service.isActive : true,
             durationMins: service.durationMins?.toString() || '',
             categoryId: service.categoryId || '',
             imageUrl: service.imageUrl || ''
         });
         setImagePreview(service.imageUrl || null);
+        setExistingImageUrls(service.imageUrls || []);
+        setSelectedFiles([]);
+        setImagePreviews([]);
         setOpenModal(true);
     };
 
@@ -159,6 +175,7 @@ const ServicesPage = () => {
             employeePayout: '',
             cmpPayout: '',
             isInstant: false,
+            isActive: true,
             durationMins: '',
             categoryId: '',
             imageUrl: category.icon || ''
@@ -189,6 +206,7 @@ const ServicesPage = () => {
         employeePayout: '',
         cmpPayout: '',
         isInstant: false,
+        isActive: true as boolean,
         durationMins: '',
         categoryId: '',
         imageUrl: ''
@@ -215,18 +233,42 @@ const ServicesPage = () => {
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            // Store the file for later upload
-            setSelectedFile(file);
-            // Create preview
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64 = reader.result as string;
-                setImagePreview(base64);
-            };
-            reader.readAsDataURL(file);
+        if (modalType === 'CATEGORY') {
+            // Category: single icon upload
+            const file = e.target.files?.[0];
+            if (file) {
+                setSelectedFile(file);
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImagePreview(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            // Service: multi-image upload
+            const files = Array.from(e.target.files || []);
+            if (files.length > 0) {
+                setSelectedFiles((prev) => [...prev, ...files]);
+                files.forEach((file) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setImagePreviews((prev) => [...prev, { file, preview: reader.result as string }]);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
         }
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleRemoveNewImage = (indexToRemove: number) => {
+        setSelectedFiles((prev) => prev.filter((_, i) => i !== indexToRemove));
+        setImagePreviews((prev) => prev.filter((_, i) => i !== indexToRemove));
+    };
+
+    const handleRemoveExistingImage = (indexToRemove: number) => {
+        setExistingImageUrls((prev) => prev.filter((_, i) => i !== indexToRemove));
     };
 
     const handleSubmit = async () => {
@@ -248,9 +290,10 @@ const ServicesPage = () => {
                     employeePayout: Number(formData.employeePayout) || 0,
                     cmpPayout: Number(formData.cmpPayout) || 0,
                     isInstant: formData.isInstant || false,
+                    isActive: formData.isActive,
                     durationMins: Number(formData.durationMins) || 15,
-                    isActive: true,
-                    description: formData.descriptionObj
+                    description: formData.descriptionObj,
+                    imageUrls: existingImageUrls,
                 };
 
                 let serviceId = editingItem?.id;
@@ -262,9 +305,9 @@ const ServicesPage = () => {
                     serviceId = result.data?.id || result.id;
                 }
 
-                // Upload image if file was selected
-                if (selectedFile && serviceId) {
-                    await dispatch(uploadServiceImage({ serviceId, file: selectedFile }) as any);
+                // Upload new images if files were selected
+                if (selectedFiles.length > 0 && serviceId) {
+                    await dispatch(uploadServiceImages({ serviceId, files: selectedFiles }) as any);
                 }
             } else {
                 // Category payload
@@ -292,8 +335,11 @@ const ServicesPage = () => {
             setIsSubmitting(false);
         }
         handleCloseModal();
-        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, durationMins: '', categoryId: '', imageUrl: '' });
+        setFormData({ name: '', title: '', description: '', descriptionObj: { shortDescription: '', description: '', whatsIncluded: [], whatsNotIncluded: [], productsWeUse: [], productsNeededFromCustomer: [] }, basePrice: '', employeePayout: '', cmpPayout: '', isInstant: false, isActive: true, durationMins: '', categoryId: '', imageUrl: '' });
         setSelectedFile(null);
+        setSelectedFiles([]);
+        setImagePreviews([]);
+        setExistingImageUrls([]);
     };
 
     return (
@@ -356,6 +402,19 @@ const ServicesPage = () => {
                                             <Chip label={`₹${service.basePrice ?? 0}`} size="small" color="primary" variant="outlined" />
                                             <Chip label={`${service.durationMins ?? 0} mins`} size="small" variant="outlined" />
                                         </Stack>
+                                        <Tooltip title="Click to copy service ID for CTA link">
+                                            <Chip
+                                                icon={<CopyIcon sx={{ fontSize: 14 }} />}
+                                                label={`service:${service.id}`}
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ mt: 1, fontSize: 11, maxWidth: '100%', cursor: 'pointer', color: 'text.secondary' }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    navigator.clipboard.writeText(`service:${service.id}`);
+                                                }}
+                                            />
+                                        </Tooltip>
                                     </CardContent>
                                     <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
                                         <PermissionGate permission="services.edit">
@@ -405,6 +464,19 @@ const ServicesPage = () => {
                                             <Typography variant="caption" color="text.secondary">
                                                 {category.isActive ? 'Active' : 'Inactive'}
                                             </Typography>
+                                            <Tooltip title="Click to copy category ID for CTA link">
+                                                <Chip
+                                                    icon={<CopyIcon sx={{ fontSize: 12 }} />}
+                                                    label={`category:${category.id}`}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ mt: 0.5, fontSize: 10, cursor: 'pointer', color: 'text.secondary' }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        navigator.clipboard.writeText(`category:${category.id}`);
+                                                    }}
+                                                />
+                                            </Tooltip>
                                         </Box>
                                     </Box>
                                     <PermissionGate permission="services.edit">
@@ -438,47 +510,75 @@ const ServicesPage = () => {
                             <input
                                 type="file"
                                 accept="image/*"
+                                multiple={modalType === 'SERVICE'}
                                 ref={fileInputRef}
                                 style={{ display: 'none' }}
                                 onChange={handleImageUpload}
                             />
-                            <Box
-                                onClick={() => fileInputRef.current?.click()}
-                                sx={{
-                                    width: modalType === 'SERVICE' ? '100%' : 100,
-                                    height: modalType === 'SERVICE' ? 140 : 100,
-                                    mx: 'auto',
-                                    border: '2px dashed',
-                                    borderColor: 'grey.400',
-                                    borderRadius: modalType === 'SERVICE' ? 2 : '50%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    overflow: 'hidden',
-                                    bgcolor: 'grey.100',
-                                    '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' }
-                                }}
-                            >
-                                {imagePreview ? (
-                                    <img
-                                        src={imagePreview}
-                                        alt="Preview"
-                                        style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            objectFit: 'cover'
-                                        }}
-                                    />
-                                ) : (
-                                    <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
-                                        <CloudUploadIcon sx={{ fontSize: 32 }} />
-                                        <Typography variant="caption" display="block">
-                                            {modalType === 'SERVICE' ? 'Upload Service Image' : 'Upload Icon'}
-                                        </Typography>
+                            {modalType === 'SERVICE' ? (
+                                /* Multi-image upload for services */
+                                <Box>
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Service Images</Typography>
+                                    {/* Existing images */}
+                                    {existingImageUrls.length > 0 && (
+                                        <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                                            {existingImageUrls.map((url, idx) => (
+                                                <Box key={`existing-${idx}`} sx={{ position: 'relative', width: 80, height: 80 }}>
+                                                    <img src={url} alt={`Image ${idx + 1}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleRemoveExistingImage(idx)}
+                                                        sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 20, height: 20 }}
+                                                    >
+                                                        <DeleteIcon sx={{ fontSize: 14 }} />
+                                                    </IconButton>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                    )}
+                                    {/* New image previews */}
+                                    {imagePreviews.length > 0 && (
+                                        <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                                            {imagePreviews.map((item, idx) => (
+                                                <Box key={`new-${idx}`} sx={{ position: 'relative', width: 80, height: 80 }}>
+                                                    <img src={item.preview} alt={`New ${idx + 1}`} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleRemoveNewImage(idx)}
+                                                        sx={{ position: 'absolute', top: -8, right: -8, bgcolor: 'error.main', color: 'white', '&:hover': { bgcolor: 'error.dark' }, width: 20, height: 20 }}
+                                                    >
+                                                        <DeleteIcon sx={{ fontSize: 14 }} />
+                                                    </IconButton>
+                                                </Box>
+                                            ))}
+                                        </Stack>
+                                    )}
+                                    <Box
+                                        onClick={() => fileInputRef.current?.click()}
+                                        sx={{ width: '100%', height: 80, border: '2px dashed', borderColor: 'grey.400', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', bgcolor: 'grey.100', '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' } }}
+                                    >
+                                        <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
+                                            <CloudUploadIcon sx={{ fontSize: 28 }} />
+                                            <Typography variant="caption" display="block">Click to add images</Typography>
+                                        </Box>
                                     </Box>
-                                )}
-                            </Box>
+                                </Box>
+                            ) : (
+                                /* Single icon upload for categories */
+                                <Box
+                                    onClick={() => fileInputRef.current?.click()}
+                                    sx={{ width: 100, height: 100, mx: 'auto', border: '2px dashed', borderColor: 'grey.400', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', bgcolor: 'grey.100', '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' } }}
+                                >
+                                    {imagePreview ? (
+                                        <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
+                                            <CloudUploadIcon sx={{ fontSize: 32 }} />
+                                            <Typography variant="caption" display="block">Upload Icon</Typography>
+                                        </Box>
+                                    )}
+                                </Box>
+                            )}
                         </Box>
 
                         {modalType === 'CATEGORY' ? (
@@ -539,6 +639,16 @@ const ServicesPage = () => {
                                         />
                                     }
                                     label="Is Instant Service"
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={formData.isActive}
+                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                                            color="success"
+                                        />
+                                    }
+                                    label="Visible to Customers"
                                 />
                                 <TextField
                                     label="Duration (mins)"

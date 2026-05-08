@@ -11,6 +11,7 @@ import reviewsReducer from './slices/reviewsSlice';
 import trackingReducer from './slices/trackingSlice';
 import reportsReducer from './slices/reportsSlice';
 import settingsReducer from './slices/settingsSlice';
+import promotionsReducer from './slices/promotionsSlice';
 
 export const store = configureStore({
     reducer: {
@@ -25,6 +26,7 @@ export const store = configureStore({
         tracking: trackingReducer,
         reports: reportsReducer,
         settings: settingsReducer,
+        promotions: promotionsReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
