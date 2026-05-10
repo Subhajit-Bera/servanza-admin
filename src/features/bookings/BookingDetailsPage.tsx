@@ -35,6 +35,7 @@ import { fetchBookingById, cancelBooking, processRefund } from '../../store/slic
 import { COLORS } from '../../theme/theme';
 import AssignBuddyDialog from './AssignBuddyDialog';
 import { PermissionGate } from '../../components/common/PermissionGate';
+import { getBookingItems } from '../../utils/bookingHelpers';
 
 const BookingDetailsPage = () => {
     const { id } = useParams<{ id: string }>();
@@ -227,14 +228,44 @@ const BookingDetailsPage = () => {
                     <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Service Details</Typography>
                         <Stack spacing={2}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography color="text.secondary">Service</Typography>
-                                <Typography fontWeight={500}>{booking.service.title}</Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography color="text.secondary">Price</Typography>
-                                <Typography fontWeight={500}>₹{booking.totalAmount}</Typography>
-                            </Box>
+                            {(() => {
+                                const items = getBookingItems(booking);
+                                if (items.length > 0) {
+                                    return (
+                                        <>
+                                            {items.map((item: any, idx: number) => (
+                                                <Box key={idx} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Box>
+                                                        <Typography fontWeight={500}>{item.title}</Typography>
+                                                        <Typography variant="body2" color="text.secondary">
+                                                            Qty: {item.quantity || 1} × ₹{item.price}
+                                                        </Typography>
+                                                    </Box>
+                                                    <Typography fontWeight={600}>₹{(item.price || 0) * (item.quantity || 1)}</Typography>
+                                                </Box>
+                                            ))}
+                                            <Divider />
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                <Typography fontWeight={600}>Total</Typography>
+                                                <Typography fontWeight={700} color="primary">₹{booking.totalAmount}</Typography>
+                                            </Box>
+                                        </>
+                                    );
+                                }
+                                // Legacy fallback: single service
+                                return (
+                                    <>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography color="text.secondary">Service</Typography>
+                                            <Typography fontWeight={500}>{booking.service?.title || 'Unknown Service'}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <Typography color="text.secondary">Price</Typography>
+                                            <Typography fontWeight={500}>₹{booking.totalAmount}</Typography>
+                                        </Box>
+                                    </>
+                                );
+                            })()}
                             <Divider />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography color="text.secondary">Scheduled</Typography>
@@ -248,6 +279,14 @@ const BookingDetailsPage = () => {
                                     {booking.address ? `${booking.address.streetAddress}, ${booking.address.city}` : 'N/A'}
                                 </Typography>
                             </Box>
+                            {booking.specialInstructions && (
+                                <Box>
+                                    <Typography color="text.secondary" sx={{ mb: 0.5 }}>Customer Notes</Typography>
+                                    <Typography variant="body2" sx={{ fontStyle: 'italic', color: COLORS.darkGray }}>
+                                        {booking.specialInstructions}
+                                    </Typography>
+                                </Box>
+                            )}
                         </Stack>
                     </Paper>
 

@@ -56,6 +56,7 @@ import { COLORS, SHADOWS } from '../../theme';
 import { usePermission } from '../../components/common/PermissionGate';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { getDisplayTitle } from '../../utils/bookingHelpers';
 
 dayjs.extend(relativeTime);
 
@@ -416,7 +417,7 @@ const DashboardPage: React.FC = () => {
                                                             </Typography>
                                                         </Box>
                                                     </TableCell>
-                                                    <TableCell>{booking.service?.title || '-'}</TableCell>
+                                                    <TableCell>{getDisplayTitle(booking)}</TableCell>
                                                     <TableCell>
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                             <TimeIcon sx={{ fontSize: 14, color: COLORS.mediumGray }} />

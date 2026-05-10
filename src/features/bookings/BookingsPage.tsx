@@ -28,6 +28,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
 import { fetchBookings, setFilters, setPage } from '../../store/slices/bookingsSlice';
 import { COLORS } from '../../theme/theme';
+import { getDisplayTitle } from '../../utils/bookingHelpers';
 
 
 
@@ -162,7 +163,7 @@ const BookingsPage = () => {
                                             <Typography variant="body2">{booking.user?.name || 'Unknown'}</Typography>
                                         </Stack>
                                     </TableCell>
-                                    <TableCell>{booking.service?.title || 'Unknown Service'}</TableCell>
+                                    <TableCell>{getDisplayTitle(booking)}</TableCell>
                                     <TableCell>
                                         {getAssignedBuddyName(booking)}
                                     </TableCell>

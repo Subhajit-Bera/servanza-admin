@@ -33,6 +33,7 @@ import type { OnlineBuddy } from '../../store/slices/trackingSlice';
 import { COLORS } from '../../theme';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { getDisplayTitle } from '../../utils/bookingHelpers';
 
 dayjs.extend(relativeTime);
 
@@ -235,7 +236,7 @@ const TrackingPage: React.FC = () => {
                                                     Active Job
                                                 </Typography>
                                                 <Typography variant="body2">
-                                                    {buddy.activeBooking.service.title}
+                                                    {getDisplayTitle(buddy.activeBooking)}
                                                 </Typography>
                                             </Box>
                                         )}
@@ -289,7 +290,7 @@ const TrackingPage: React.FC = () => {
                                 </Stack>
                                 {buddy.activeBooking && (
                                     <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', ml: 7 }}>
-                                        {buddy.activeBooking.service.title}
+                                        {getDisplayTitle(buddy.activeBooking)}
                                     </Typography>
                                 )}
                             </Card>
