@@ -300,9 +300,19 @@ const BookingDetailsPage = () => {
                             </Box>
                         ) : (
                             <Stepper activeStep={activeStep} orientation="vertical">
-                                {steps.map((step) => (
+                                {steps.map((step, index) => (
                                     <Step key={step.label}>
-                                        <StepLabel error={false}>{step.label}</StepLabel>
+                                        <StepLabel error={false}>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <Typography fontWeight={500}>{step.label}</Typography>
+                                                {/* Show completedAt timestamp on the Completed step */}
+                                                {index === 3 && booking.status === 'COMPLETED' && booking.completedAt && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        — {dayjs(booking.completedAt).format('MMM D, YYYY h:mm A')}
+                                                    </Typography>
+                                                )}
+                                            </Stack>
+                                        </StepLabel>
                                         <StepContent>
                                             <Typography variant="body2" color="text.secondary">{step.description}</Typography>
                                         </StepContent>
@@ -310,6 +320,47 @@ const BookingDetailsPage = () => {
                                 ))}
                             </Stepper>
                         )}
+
+                        {/* Cancellation timestamp */}
+                        {booking.status === 'CANCELLED' && (
+                            <Box sx={{ mt: 2, p: 2, bgcolor: '#FFF3E0', borderRadius: 1 }}>
+                                <Typography fontWeight={600} color="text.primary">Booking Cancelled</Typography>
+                                {booking.cancelledAt && (
+                                    <Typography variant="body2" color="text.secondary">
+                                        Cancelled on {dayjs(booking.cancelledAt).format('MMM D, YYYY h:mm A')}
+                                    </Typography>
+                                )}
+                            </Box>
+                        )}
+
+                        {/* Communication window info for completed bookings */}
+                        {booking.status === 'COMPLETED' && booking.completedAt && (() => {
+                            const completedTime = dayjs(booking.completedAt);
+                            const customerWindowEnd = completedTime.add(24, 'hour');
+                            const buddyWindowEnd = completedTime.add(12, 'hour');
+                            const now = dayjs();
+                            const customerWindowActive = now.isBefore(customerWindowEnd);
+                            const buddyWindowActive = now.isBefore(buddyWindowEnd);
+                            return (
+                                <Box sx={{ mt: 2, p: 2, bgcolor: customerWindowActive ? '#E8F5E9' : '#FAFAFA', borderRadius: 1, border: '1px solid', borderColor: customerWindowActive ? '#C8E6C9' : '#E0E0E0' }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                                        Communication Window
+                                    </Typography>
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Customer chat/call: {customerWindowActive
+                                                ? `Active until ${customerWindowEnd.format('MMM D, h:mm A')} (${customerWindowEnd.diff(now, 'hour')}h ${customerWindowEnd.diff(now, 'minute') % 60}m remaining)`
+                                                : 'Expired'}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Buddy chat/call: {buddyWindowActive
+                                                ? `Active until ${buddyWindowEnd.format('MMM D, h:mm A')} (${buddyWindowEnd.diff(now, 'hour')}h ${buddyWindowEnd.diff(now, 'minute') % 60}m remaining)`
+                                                : 'Expired'}
+                                        </Typography>
+                                    </Stack>
+                                </Box>
+                            );
+                        })()}
                     </Paper>
 
                     {/* Admin Actions */}

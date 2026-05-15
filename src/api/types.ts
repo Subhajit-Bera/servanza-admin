@@ -312,6 +312,8 @@ export interface Booking {
 
     createdAt: string;
     updatedAt: string;
+    completedAt?: string;
+    cancelledAt?: string;
 }
 
 // Payloads
