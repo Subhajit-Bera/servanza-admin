@@ -24,13 +24,15 @@ import {
     Snackbar,
     Stack,
     Paper,
+    Chip,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Edit as EditIcon,
-    Delete as DeleteIcon,
     Category as CategoryIcon,
     CloudUpload as CloudUploadIcon,
+    Visibility as VisibilityIcon,
+    VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
@@ -214,6 +216,7 @@ const CategoriesPage: React.FC = () => {
                                     <TableCell>Category</TableCell>
                                     <TableCell>Slug</TableCell>
                                     <TableCell>Description</TableCell>
+                                    <TableCell>Status</TableCell>
                                     <TableCell>Services</TableCell>
                                     <TableCell align="center">Actions</TableCell>
                                 </TableRow>
@@ -222,6 +225,7 @@ const CategoriesPage: React.FC = () => {
                                 {loading ? (
                                     [...Array(5)].map((_, i) => (
                                         <TableRow key={i}>
+                                            <TableCell><Skeleton variant="text" /></TableCell>
                                             <TableCell><Skeleton variant="text" /></TableCell>
                                             <TableCell><Skeleton variant="text" /></TableCell>
                                             <TableCell><Skeleton variant="text" /></TableCell>
@@ -261,6 +265,13 @@ const CategoriesPage: React.FC = () => {
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
+                                                <Chip 
+                                                    label={category.isActive === false ? 'Inactive' : 'Active'} 
+                                                    color={category.isActive === false ? 'error' : 'success'} 
+                                                    size="small" 
+                                                />
+                                            </TableCell>
+                                            <TableCell>
                                                 <Typography variant="body2" fontWeight={600}>
                                                     {getServiceCount(category.id)}
                                                 </Typography>
@@ -274,12 +285,12 @@ const CategoriesPage: React.FC = () => {
                                                         <EditIcon />
                                                     </IconButton>
                                                 </Tooltip>
-                                                <Tooltip title="Delete">
+                                                <Tooltip title={category.isActive === false ? "Activate" : "Deactivate"}>
                                                     <IconButton
-                                                        color="error"
+                                                        color={category.isActive === false ? "success" : "error"}
                                                         onClick={() => handleDeleteClick(category)}
                                                     >
-                                                        <DeleteIcon />
+                                                        {category.isActive === false ? <VisibilityIcon /> : <VisibilityOffIcon />}
                                                     </IconButton>
                                                 </Tooltip>
                                             </TableCell>
@@ -287,7 +298,7 @@ const CategoriesPage: React.FC = () => {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                                             <Typography color="text.secondary">No categories found</Typography>
                                             <Button
                                                 variant="outlined"
@@ -423,17 +434,17 @@ const CategoriesPage: React.FC = () => {
 
             {/* Delete Confirmation Dialog */}
             <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-                <DialogTitle>Delete Category</DialogTitle>
+                <DialogTitle>{categoryToDelete?.isActive === false ? 'Activate Category' : 'Deactivate Category'}</DialogTitle>
                 <DialogContent>
                     <Typography>
-                        Are you sure you want to delete "{categoryToDelete?.name}"?
-                        This action cannot be undone.
+                        Are you sure you want to {categoryToDelete?.isActive === false ? 'activate' : 'deactivate'} "{categoryToDelete?.name}"?
+                        {categoryToDelete?.isActive !== false && " This will hide it from the user app."}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                    <Button variant="contained" color="error" onClick={handleConfirmDelete}>
-                        Delete
+                    <Button variant="contained" color={categoryToDelete?.isActive === false ? "success" : "error"} onClick={handleConfirmDelete}>
+                        {categoryToDelete?.isActive === false ? 'Activate' : 'Deactivate'}
                     </Button>
                 </DialogActions>
             </Dialog>

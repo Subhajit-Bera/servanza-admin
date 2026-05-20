@@ -29,15 +29,16 @@ import {
     Avatar,
 } from '@mui/material';
 import {
-    Delete as DeleteIcon,
     Refresh as RefreshIcon,
     Visibility as ViewIcon,
+    Visibility as VisibilityIcon,
+    VisibilityOff as VisibilityOffIcon,
     PersonOutline as PersonIcon,
 } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
     fetchReviews,
-    deleteReview,
+    deleteReview, // Note: This acts as a toggle visibility action in backend
     selectReviews,
     selectReviewsLoading,
     selectReviewsPagination,
@@ -62,9 +63,9 @@ const ReviewsPage: React.FC = () => {
 
     // Dialogs
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [toggleDialogOpen, setToggleDialogOpen] = useState(false);
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-    const [deleteReason, setDeleteReason] = useState('');
+    const [toggleReason, setToggleReason] = useState('');
 
     useEffect(() => {
         loadReviews();
@@ -86,21 +87,21 @@ const ReviewsPage: React.FC = () => {
         setViewDialogOpen(true);
     };
 
-    const handleOpenDeleteDialog = (review: Review) => {
+    const handleOpenToggleDialog = (review: Review) => {
         setSelectedReview(review);
-        setDeleteReason('');
-        setDeleteDialogOpen(true);
+        setToggleReason('');
+        setToggleDialogOpen(true);
     };
 
-    const handleDeleteReview = async () => {
+    const handleToggleReview = async () => {
         if (!selectedReview) return;
 
         await dispatch(deleteReview({
             reviewId: selectedReview.id,
-            reason: deleteReason,
+            reason: toggleReason,
         }));
 
-        setDeleteDialogOpen(false);
+        setToggleDialogOpen(false);
         loadReviews();
     };
 
@@ -260,13 +261,13 @@ const ReviewsPage: React.FC = () => {
                                                 </IconButton>
                                             </Tooltip>
                                             <PermissionGate permission="reviews.delete">
-                                                <Tooltip title="Delete Review">
+                                                <Tooltip title={review.isHidden ? 'Show Review' : 'Hide Review'}>
                                                     <IconButton
                                                         size="small"
-                                                        color="error"
-                                                        onClick={() => handleOpenDeleteDialog(review)}
+                                                        color={review.isHidden ? 'success' : 'error'}
+                                                        onClick={() => handleOpenToggleDialog(review)}
                                                     >
-                                                        <DeleteIcon />
+                                                        {review.isHidden ? <VisibilityIcon /> : <VisibilityOffIcon />}
                                                     </IconButton>
                                                 </Tooltip>
                                             </PermissionGate>
@@ -342,33 +343,35 @@ const ReviewsPage: React.FC = () => {
                     <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
                     <PermissionGate permission="reviews.delete">
                         <Button
-                            color="error"
+                            color={selectedReview?.isHidden ? 'success' : 'error'}
                             onClick={() => {
                                 setViewDialogOpen(false);
-                                if (selectedReview) handleOpenDeleteDialog(selectedReview);
+                                if (selectedReview) handleOpenToggleDialog(selectedReview);
                             }}
                         >
-                            Delete Review
+                            {selectedReview?.isHidden ? 'Show Review' : 'Hide Review'}
                         </Button>
                     </PermissionGate>
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Review Dialog */}
-            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="xs" fullWidth>
-                <DialogTitle color="error">Delete Review</DialogTitle>
+            {/* Toggle Review Dialog */}
+            <Dialog open={toggleDialogOpen} onClose={() => setToggleDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle color={selectedReview?.isHidden ? 'success.main' : 'error'}>
+                    {selectedReview?.isHidden ? 'Show Review' : 'Hide Review'}
+                </DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         <Typography>
-                            Are you sure you want to delete this review by <strong>{selectedReview?.user?.name}</strong>?
+                            Are you sure you want to {selectedReview?.isHidden ? 'show' : 'hide'} this review by <strong>{selectedReview?.user?.name}</strong>?
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                             This will also update the buddy's average rating.
                         </Typography>
                         <TextField
-                            label="Reason for deletion (optional)"
-                            value={deleteReason}
-                            onChange={(e) => setDeleteReason(e.target.value)}
+                            label="Reason (optional)"
+                            value={toggleReason}
+                            onChange={(e) => setToggleReason(e.target.value)}
                             multiline
                             rows={2}
                             fullWidth
@@ -376,14 +379,14 @@ const ReviewsPage: React.FC = () => {
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setToggleDialogOpen(false)}>Cancel</Button>
                     <Button
                         variant="contained"
-                        color="error"
-                        onClick={handleDeleteReview}
+                        color={selectedReview?.isHidden ? 'success' : 'error'}
+                        onClick={handleToggleReview}
                         disabled={loading}
                     >
-                        {loading ? <CircularProgress size={24} /> : 'Delete Review'}
+                        {loading ? <CircularProgress size={24} /> : (selectedReview?.isHidden ? 'Show Review' : 'Hide Review')}
                     </Button>
                 </DialogActions>
             </Dialog>

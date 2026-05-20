@@ -21,10 +21,12 @@ import {
 import { useAppSelector} from '../../store/hooks';
 
 import { COLORS, SHADOWS } from '../../theme';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const ProfilePage: React.FC = () => {
     const { user } = useAppSelector((state) => state.auth);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
     const getRoleColor = (role?: string) => {
         switch (role) {
@@ -160,7 +162,7 @@ const ProfilePage: React.FC = () => {
                                             Last changed: Never
                                         </Typography>
                                     </Box>
-                                    <Button variant="outlined" size="small">
+                                    <Button variant="outlined" size="small" onClick={() => setIsPasswordModalOpen(true)}>
                                         Change Password
                                     </Button>
                                 </Stack>
@@ -209,6 +211,11 @@ const ProfilePage: React.FC = () => {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
+            <ChangePasswordModal 
+                open={isPasswordModalOpen} 
+                onClose={() => setIsPasswordModalOpen(false)} 
+                onSuccess={() => setSnackbar({ open: true, message: 'Password changed successfully', severity: 'success' })}
+            />
         </Box>
     );
 };

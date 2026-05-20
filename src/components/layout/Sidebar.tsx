@@ -31,6 +31,7 @@ import {
     ExpandMore,
     Logout as LogoutIcon,
     Campaign as CampaignIcon,
+    ConfirmationNumber as CouponIcon,
 } from '@mui/icons-material';
 import { COLORS } from '../../theme';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -133,6 +134,12 @@ const menuItems: MenuItem[] = [
         icon: <CampaignIcon />,
         path: '/promotions',
         permissions: ['services.create']
+    },
+    {
+        title: 'Coupons',
+        icon: <CouponIcon />,
+        path: '/coupons',
+        permissions: ['services.create'] // or any suitable permission
     },
     {
         title: 'Reports',

@@ -1,5 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
+import couponsReducer from './slices/couponsSlice';
 import dashboardReducer from './slices/dashboardSlice';
 import customersReducer from './slices/customersSlice';
 
@@ -27,6 +28,7 @@ export const store = configureStore({
         reports: reportsReducer,
         settings: settingsReducer,
         promotions: promotionsReducer,
+        coupons: couponsReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

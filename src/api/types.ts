@@ -375,3 +375,47 @@ export interface CreatePromotionPayload {
 }
 
 export interface UpdatePromotionPayload extends Partial<CreatePromotionPayload> {}
+
+// Coupon Types
+
+export const DiscountType = {
+    PERCENTAGE: 'PERCENTAGE',
+    FIXED: 'FIXED',
+} as const;
+export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
+
+export interface Coupon {
+    id: string;
+    code: string;
+    discountType: string;
+    discountValue: number;
+    maxDiscountAmount?: number;
+    minOrderAmount?: number;
+    validFrom: string;
+    validUntil?: string;
+    isActive: boolean;
+    usageLimit?: number;
+    usedCount: number;
+    applicableServices?: string[];
+    applicableCategories?: string[];
+    description?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateCouponPayload {
+    code: string;
+    discountType: string;
+    discountValue: number;
+    maxDiscountAmount?: number | null;
+    minOrderAmount?: number | null;
+    validFrom: string;
+    validUntil?: string | null;
+    isActive?: boolean;
+    usageLimit?: number | null;
+    applicableServices?: string[];
+    applicableCategories?: string[];
+    description?: string | null;
+}
+
+export interface UpdateCouponPayload extends Partial<CreateCouponPayload> {}

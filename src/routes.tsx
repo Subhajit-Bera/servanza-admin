@@ -30,6 +30,7 @@ import RolePermissionsPage from './features/settings/RolePermissionsPage';
 import ProfilePage from './features/profile/ProfilePage';
 import NotificationsPage from './features/notifications/NotificationsPage';
 import PromotionsPage from './features/promotions/PromotionsPage';
+import CouponsPage from './features/coupons/CouponsPage';
 
 export const router = createBrowserRouter([
     // Public routes
@@ -174,6 +175,11 @@ export const router = createBrowserRouter([
                     {
                         path: '/promotions',
                         element: <RequirePermission permission="services.create"><PromotionsPage /></RequirePermission>
+                    },
+                    // Coupons
+                    {
+                        path: '/coupons',
+                        element: <RequirePermission permission="services.create"><CouponsPage /></RequirePermission>
                     },
                 ],
             },

@@ -18,6 +18,17 @@ import {
     Badge,
     Tooltip,
     Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Snackbar,
+    MenuItem,
+    Stack,
+    FormControl,
+    InputLabel,
+    Select,
 } from '@mui/material';
 import {
     Warning as WarningIcon,
@@ -26,6 +37,7 @@ import {
     Visibility as ViewIcon,
     CheckCircle as CheckIcon,
     Refresh as RefreshIcon,
+    Send as SendIcon,
 } from '@mui/icons-material';
 import { COLORS, SHADOWS } from '../../theme';
 import client from '../../api/client';
@@ -62,6 +74,15 @@ const NotificationsPage: React.FC = () => {
         pendingVerifications: 0,
         trainingScheduled: 0,
     });
+
+    const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+    const [broadcastData, setBroadcastData] = useState({
+        title: '',
+        body: '',
+        targetSegment: 'ALL_USERS',
+    });
+    const [broadcasting, setBroadcasting] = useState(false);
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
     useEffect(() => {
         fetchNotifications();
@@ -135,6 +156,20 @@ const NotificationsPage: React.FC = () => {
 
     const filteredNotifications = filterNotifications(selectedTab);
 
+    const handleBroadcast = async () => {
+        try {
+            setBroadcasting(true);
+            await client.post('/admin/notifications/broadcast', broadcastData);
+            setSnackbar({ open: true, message: 'Broadcast notification sent successfully', severity: 'success' });
+            setBroadcastModalOpen(false);
+            setBroadcastData({ title: '', body: '', targetSegment: 'ALL_USERS' });
+        } catch (err: any) {
+            setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to send broadcast', severity: 'error' });
+        } finally {
+            setBroadcasting(false);
+        }
+    };
+
     return (
         <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -144,13 +179,24 @@ const NotificationsPage: React.FC = () => {
                         Stay updated on escalated bookings, pending verifications, and training requests
                     </Typography>
                 </Box>
-                <Button
-                    startIcon={<RefreshIcon />}
-                    onClick={fetchNotifications}
-                    variant="outlined"
-                >
-                    Refresh
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                        startIcon={<RefreshIcon />}
+                        onClick={fetchNotifications}
+                        variant="outlined"
+                        disabled={loading}
+                    >
+                        Refresh
+                    </Button>
+                    <Button
+                        startIcon={<SendIcon />}
+                        onClick={() => setBroadcastModalOpen(true)}
+                        variant="contained"
+                        color="primary"
+                    >
+                        Broadcast
+                    </Button>
+                </Box>
             </Box>
 
             {/* Summary Cards */}
@@ -344,6 +390,66 @@ const NotificationsPage: React.FC = () => {
                     </List>
                 </CardContent>
             </Card>
+
+            {/* Broadcast Modal */}
+            <Dialog open={broadcastModalOpen} onClose={() => setBroadcastModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Broadcast Push Notification</DialogTitle>
+                <DialogContent dividers>
+                    <Stack spacing={3} sx={{ mt: 1 }}>
+                        <TextField
+                            label="Notification Title"
+                            fullWidth
+                            value={broadcastData.title}
+                            onChange={(e) => setBroadcastData({ ...broadcastData, title: e.target.value })}
+                            required
+                        />
+                        <TextField
+                            label="Notification Body"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            value={broadcastData.body}
+                            onChange={(e) => setBroadcastData({ ...broadcastData, body: e.target.value })}
+                            required
+                        />
+                        <FormControl fullWidth>
+                            <InputLabel>Target Segment</InputLabel>
+                            <Select
+                                value={broadcastData.targetSegment}
+                                label="Target Segment"
+                                onChange={(e) => setBroadcastData({ ...broadcastData, targetSegment: e.target.value })}
+                            >
+                                <MenuItem value="ALL_USERS">All Customers</MenuItem>
+                                <MenuItem value="ALL_BUDDIES">All Buddies</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBroadcastModalOpen(false)}>Cancel</Button>
+                    <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={handleBroadcast} 
+                        disabled={broadcasting || !broadcastData.title || !broadcastData.body}
+                        startIcon={<SendIcon />}
+                    >
+                        {broadcasting ? 'Sending...' : 'Send Broadcast'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity}>
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

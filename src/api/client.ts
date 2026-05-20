@@ -59,6 +59,9 @@ export const authApi = {
 
     refreshToken: (refreshToken: string) =>
         apiClient.post('/auth/refresh-token', { refreshToken }),
+
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+        apiClient.post('/auth/change-password', data),
 };
 
 // Dashboard API

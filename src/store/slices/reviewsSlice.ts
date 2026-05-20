@@ -10,6 +10,7 @@ export interface Review {
     buddyId: string;
     rating: number;
     comment?: string;
+    isHidden?: boolean;
     createdAt: string;
     updatedAt: string;
     user: {
