@@ -18,7 +18,7 @@ export const fetchPromotions = createAsyncThunk(
     'promotions/fetchPromotions',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await client.get<any>('/promotions?all=true');
+            const response = await client.get<any>('/admin/promotions');
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to fetch promotions');

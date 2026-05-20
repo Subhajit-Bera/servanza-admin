@@ -23,6 +23,8 @@ import {
     Avatar,
     FormControlLabel,
     Switch,
+    Snackbar,
+    Alert,
     Tooltip,
 } from '@mui/material';
 import {
@@ -34,7 +36,7 @@ import {
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
-import { fetchServices, fetchCategories, createService, createCategory, updateService, updateCategory, uploadServiceImages, uploadCategoryIcon } from '../../store/slices/servicesSlice';
+import { fetchServices, fetchCategories, createService, createCategory, updateService, updateCategory, deleteService, uploadServiceImages, uploadCategoryIcon } from '../../store/slices/servicesSlice';
 import { COLORS } from '../../theme/theme';
 import type { Service, Category } from '../../api/types';
 import { PermissionGate } from '../../components/common/PermissionGate';
@@ -90,6 +92,7 @@ const ServicesPage = () => {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [deleteSnackbar, setDeleteSnackbar] = useState({ open: false, message: '' });
     // Multi-image support for services
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<{ file: File; preview: string }[]>([]);
@@ -423,9 +426,21 @@ const ServicesPage = () => {
                                             </IconButton>
                                         </PermissionGate>
                                         <PermissionGate permission="services.delete">
-                                            <IconButton size="small" color="error">
-                                                <DeleteIcon />
-                                            </IconButton>
+                                            <Tooltip title={service.isActive ? 'Deactivate Service' : 'Activate Service'}>
+                                                <IconButton
+                                                    size="small"
+                                                    color={service.isActive ? 'error' : 'success'}
+                                                    onClick={() => {
+                                                        if (window.confirm(`Are you sure you want to ${service.isActive ? 'deactivate' : 'activate'} "${service.title}"?`)) {
+                                                            dispatch(deleteService(service.id)).then(() => {
+                                                                setDeleteSnackbar({ open: true, message: `Service "${service.title}" ${service.isActive ? 'deactivated' : 'activated'}` });
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Tooltip>
                                         </PermissionGate>
                                     </CardActions>
                                 </Card>
@@ -751,6 +766,21 @@ const ServicesPage = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            {/* Delete/Toggle Snackbar */}
+            <Snackbar
+                open={deleteSnackbar.open}
+                autoHideDuration={3000}
+                onClose={() => setDeleteSnackbar({ ...deleteSnackbar, open: false })}
+            >
+                <Alert
+                    onClose={() => setDeleteSnackbar({ ...deleteSnackbar, open: false })}
+                    severity="success"
+                    sx={{ width: '100%' }}
+                >
+                    {deleteSnackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

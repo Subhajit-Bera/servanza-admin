@@ -62,6 +62,12 @@ export const authApi = {
 
     changePassword: (data: { currentPassword: string; newPassword: string }) =>
         apiClient.post('/auth/change-password', data),
+        
+    forgotPassword: (email: string) =>
+        apiClient.post('/auth/forgot-password', { email }),
+
+    resetPassword: (data: { token: string; newPassword: string }) =>
+        apiClient.post('/auth/reset-password', data),
 };
 
 // Dashboard API

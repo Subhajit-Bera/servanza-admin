@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import {
     Box,
     Card,
@@ -8,40 +8,41 @@ import {
     Button,
     Typography,
     InputAdornment,
-    IconButton,
-    Checkbox,
-    FormControlLabel,
     Alert,
     CircularProgress,
     Link,
 } from '@mui/material';
 import {
     Email as EmailIcon,
-    Lock as LockIcon,
-    Visibility,
-    VisibilityOff,
+    ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { login, clearError } from '../../store/slices/authSlice';
+import { authApi } from '../../api/client';
 import { COLORS, SHADOWS } from '../../theme';
 
-const LoginPage: React.FC = () => {
-    const navigate = useNavigate();
-    const dispatch = useAppDispatch();
-    const { loading, error } = useAppSelector((state) => state.auth);
-
+const ForgotPasswordPage: React.FC = () => {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        dispatch(clearError());
+        setError('');
+        setSuccess(false);
 
-        const result = await dispatch(login({ email, password }));
-        if (login.fulfilled.match(result)) {
-            navigate('/dashboard');
+        if (!email) {
+            setError('Please enter your email address');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await authApi.forgotPassword(email);
+            setSuccess(true);
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Failed to send reset link. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -102,16 +103,15 @@ const LoginPage: React.FC = () => {
                         Servanza Admin
                     </Typography>
                     <Typography variant="h6" color="rgba(255,255,255,0.9)" sx={{ mb: 4 }}>
-                        Manage your platform with ease
+                        Secure Password Recovery
                     </Typography>
                     <Typography variant="body1" color="rgba(255,255,255,0.8)">
-                        Access comprehensive dashboards, manage customers & buddies,
-                        track bookings, and analyze platform performance.
+                        Follow the instructions sent to your email to regain access to your administrator account.
                     </Typography>
                 </Box>
             </Box>
 
-            {/* Right Side - Login Form */}
+            {/* Right Side - Form */}
             <Box
                 sx={{
                     flex: 1,
@@ -162,7 +162,7 @@ const LoginPage: React.FC = () => {
                             textAlign="center"
                             gutterBottom
                         >
-                            Admin Portal
+                            Forgot Password
                         </Typography>
                         <Typography
                             variant="body2"
@@ -170,7 +170,7 @@ const LoginPage: React.FC = () => {
                             textAlign="center"
                             sx={{ mb: 4 }}
                         >
-                            Sign in to your account
+                            Enter your email to receive a password reset link
                         </Typography>
 
                         {error && (
@@ -178,16 +178,24 @@ const LoginPage: React.FC = () => {
                                 {error}
                             </Alert>
                         )}
+                        
+                        {success && (
+                            <Alert severity="success" sx={{ mb: 3 }}>
+                                Password reset link has been sent to your email. Please check your inbox.
+                            </Alert>
+                        )}
 
                         <Box component="form" onSubmit={handleSubmit}>
                             <TextField
                                 fullWidth
-                                label="Email or Username"
-                                placeholder="Enter your email or username"
+                                label="Email Address"
+                                placeholder="Enter your email"
+                                type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                sx={{ mb: 2.5 }}
+                                disabled={loading || success}
+                                sx={{ mb: 3 }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">
@@ -197,80 +205,18 @@ const LoginPage: React.FC = () => {
                                 }}
                             />
 
-                            <TextField
-                                fullWidth
-                                label="Password"
-                                placeholder="Enter your password"
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                sx={{ mb: 2 }}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <LockIcon sx={{ color: COLORS.primary }} />
-                                        </InputAdornment>
-                                    ),
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                edge="end"
-                                            >
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    mb: 3,
-                                }}
-                            >
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={rememberMe}
-                                            onChange={(e) => setRememberMe(e.target.checked)}
-                                            sx={{
-                                                color: COLORS.mediumGray,
-                                                '&.Mui-checked': { color: COLORS.primary },
-                                            }}
-                                        />
-                                    }
-                                    label={
-                                        <Typography variant="body2" color={COLORS.darkGray}>
-                                            Remember me
-                                        </Typography>
-                                    }
-                                />
-                                <Link
-                                    component={RouterLink}
-                                    to="/forgot-password"
-                                    underline="hover"
-                                    sx={{ color: COLORS.primary, fontSize: 14 }}
-                                >
-                                    Forgot Password?
-                                </Link>
-                            </Box>
-
                             <Button
                                 type="submit"
                                 variant="contained"
                                 fullWidth
                                 size="large"
-                                disabled={loading || !email || !password}
+                                disabled={loading || !email || success}
                                 sx={{
                                     height: 48,
                                     fontSize: 16,
                                     fontWeight: 600,
                                     boxShadow: SHADOWS.green,
+                                    mb: 3,
                                     '&:hover': {
                                         boxShadow: SHADOWS.medium,
                                     },
@@ -279,23 +225,31 @@ const LoginPage: React.FC = () => {
                                 {loading ? (
                                     <>
                                         <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
-                                        Signing in...
+                                        Sending Link...
                                     </>
                                 ) : (
-                                    'Sign In'
+                                    'Send Reset Link'
                                 )}
                             </Button>
-                        </Box>
 
-                        <Typography
-                            variant="caption"
-                            color={COLORS.mediumGray}
-                            textAlign="center"
-                            display="block"
-                            sx={{ mt: 4 }}
-                        >
-                            Protected by enterprise-grade security
-                        </Typography>
+                            <Box sx={{ textAlign: 'center' }}>
+                                <Link
+                                    component={RouterLink}
+                                    to="/login"
+                                    sx={{ 
+                                        color: COLORS.primary, 
+                                        textDecoration: 'none',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        fontWeight: 500,
+                                        '&:hover': { textDecoration: 'underline' }
+                                    }}
+                                >
+                                    <ArrowBackIcon fontSize="small" /> Back to Login
+                                </Link>
+                            </Box>
+                        </Box>
                     </CardContent>
                 </Card>
             </Box>
@@ -303,4 +257,4 @@ const LoginPage: React.FC = () => {
     );
 };
 
-export default LoginPage;
+export default ForgotPasswordPage;

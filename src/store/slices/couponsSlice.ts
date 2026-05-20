@@ -18,7 +18,7 @@ export const fetchCoupons = createAsyncThunk(
     'coupons/fetchCoupons',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await client.get('/admin/coupons');
+            const response = await client.get('/coupons');
             // Assuming the backend might wrap in data or return directly
             return response.data.data || response.data;
         } catch (error: any) {
@@ -31,7 +31,7 @@ export const createCoupon = createAsyncThunk(
     'coupons/createCoupon',
     async (payload: CreateCouponPayload, { rejectWithValue }) => {
         try {
-            const response = await client.post('/admin/coupons', payload);
+            const response = await client.post('/coupons', payload);
             return response.data.data || response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to create coupon');
@@ -43,7 +43,7 @@ export const updateCoupon = createAsyncThunk(
     'coupons/updateCoupon',
     async ({ id, payload }: { id: string; payload: UpdateCouponPayload }, { rejectWithValue }) => {
         try {
-            const response = await client.put(`/admin/coupons/${id}`, payload);
+            const response = await client.put(`/coupons/${id}`, payload);
             return response.data.data || response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to update coupon');
@@ -55,7 +55,7 @@ export const deleteCoupon = createAsyncThunk(
     'coupons/deleteCoupon',
     async (id: string, { rejectWithValue }) => {
         try {
-            await client.delete(`/admin/coupons/${id}`);
+            await client.delete(`/coupons/${id}`);
             return id;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to delete coupon');

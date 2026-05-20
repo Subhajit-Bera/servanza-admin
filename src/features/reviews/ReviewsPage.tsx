@@ -55,8 +55,8 @@ const ReviewsPage: React.FC = () => {
     const pagination = useAppSelector(selectReviewsPagination);
 
     // Filters
-    const [rating, setRating] = useState('');
-    const [statusFilter, setStatusFilter] = useState('');
+    const [rating, setRating] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [sortOrder, setSortOrder] = useState('desc');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(20);
@@ -75,8 +75,8 @@ const ReviewsPage: React.FC = () => {
         dispatch(fetchReviews({
             page: page + 1,
             limit: rowsPerPage,
-            rating: rating ? parseInt(rating) : undefined,
-            status: statusFilter || undefined,
+            rating: rating !== 'all' ? parseInt(rating) : undefined,
+            status: statusFilter !== 'all' ? statusFilter : undefined,
             sortBy: 'createdAt',
             sortOrder,
         }));
@@ -135,7 +135,7 @@ const ReviewsPage: React.FC = () => {
                             label="Rating"
                             onChange={(e) => setRating(e.target.value)}
                         >
-                            <MenuItem value="">All Ratings</MenuItem>
+                            <MenuItem value="all">All Ratings</MenuItem>
                             <MenuItem value="5">5 Stars</MenuItem>
                             <MenuItem value="4">4 Stars</MenuItem>
                             <MenuItem value="3">3 Stars</MenuItem>
@@ -151,7 +151,7 @@ const ReviewsPage: React.FC = () => {
                             label="Status"
                             onChange={(e) => setStatusFilter(e.target.value)}
                         >
-                            <MenuItem value="">All Status</MenuItem>
+                            <MenuItem value="all">All Status</MenuItem>
                             <MenuItem value="published">Published</MenuItem>
                             <MenuItem value="hidden">Hidden</MenuItem>
                         </Select>

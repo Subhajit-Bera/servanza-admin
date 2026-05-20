@@ -2,7 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { MainLayout } from './components/layout';
 import { ProtectedRoute } from './components/common';
 import { RequirePermission, RequireSuperAdmin } from './components/common/RequirePermission';
-import { LoginPage } from './features/auth';
+import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from './features/auth';
 import { DashboardPage } from './features/dashboard';
 
 import CustomersPage from './features/customers/CustomersPage';
@@ -37,6 +37,14 @@ export const router = createBrowserRouter([
     {
         path: '/login',
         element: <LoginPage />,
+    },
+    {
+        path: '/forgot-password',
+        element: <ForgotPasswordPage />,
+    },
+    {
+        path: '/reset-password',
+        element: <ResetPasswordPage />,
     },
 
     // Protected routes with MainLayout

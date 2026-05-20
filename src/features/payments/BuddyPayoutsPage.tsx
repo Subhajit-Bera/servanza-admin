@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     Box,
     Card,
@@ -10,7 +10,6 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    TablePagination,
     Chip,
     Avatar,
     IconButton,
@@ -27,35 +26,27 @@ import {
     Stack,
     Snackbar,
     Paper,
+    LinearProgress,
 } from '@mui/material';
 import {
     Search as SearchIcon,
     Payment as PaymentIcon,
-    Visibility as ViewIcon,
     AccountBalance as AccountBalanceIcon,
     TrendingUp as TrendingUpIcon,
+    Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { COLORS, SHADOWS } from '../../theme';
-import dayjs from 'dayjs';
-// API client will be used when backend endpoint is implemented
-// import client from '../../api/client';
+import apiClient from '../../api/client';
 
 interface BuddyPayout {
-    id: string;
-    buddy: {
-        id: string;
-        user: {
-            name: string;
-            email: string;
-            phone?: string;
-            profileImage?: string;
-        };
-    };
-    amount: number;
-    pendingAmount: number;
+    buddyId: string;
+    name: string;
+    phone: string;
     totalEarnings: number;
-    lastPayoutDate?: string;
-    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    totalJobs: number;
+    totalPaid: number;
+    pendingAmount: number;
+    bankDetails: any;
 }
 
 const BuddyPayoutsPage: React.FC = () => {
@@ -63,84 +54,98 @@ const BuddyPayoutsPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(10);
     const [selectedBuddy, setSelectedBuddy] = useState<BuddyPayout | null>(null);
     const [payoutDialogOpen, setPayoutDialogOpen] = useState(false);
     const [payoutAmount, setPayoutAmount] = useState('');
+    const [payoutReference, setPayoutReference] = useState('');
+    const [processing, setProcessing] = useState(false);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
-    // Mock data for demonstration - replace with actual API call
-    useEffect(() => {
-        fetchPayouts();
-    }, [page, rowsPerPage, searchTerm]);
-
-    const fetchPayouts = async () => {
+    const fetchPayouts = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
-            // TODO: Replace with actual API endpoint
-            // const response = await client.get('/admin/payouts', { params: { page, limit: rowsPerPage, search: searchTerm } });
-            // setPayouts(response.data.data);
-
-            // Mock data for now
-            setTimeout(() => {
-                setPayouts([]);
-                setLoading(false);
-            }, 500);
+            const response = await apiClient.get('/admin/payouts');
+            setPayouts(response.data.data || []);
         } catch (err: any) {
-            setError(err.message || 'Failed to fetch payouts');
+            setError(err.response?.data?.message || err.message || 'Failed to fetch payouts');
+            setPayouts([]);
+        } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchPayouts();
+    }, [fetchPayouts]);
 
     const handleOpenPayoutDialog = (buddy: BuddyPayout) => {
         setSelectedBuddy(buddy);
         setPayoutAmount(buddy.pendingAmount.toString());
+        setPayoutReference('');
         setPayoutDialogOpen(true);
     };
 
     const handleProcessPayout = async () => {
         if (!selectedBuddy || !payoutAmount) return;
 
+        const amount = parseFloat(payoutAmount);
+        if (isNaN(amount) || amount <= 0) {
+            setSnackbar({ open: true, message: 'Please enter a valid amount', severity: 'error' });
+            return;
+        }
+
+        if (amount > selectedBuddy.pendingAmount) {
+            setSnackbar({ open: true, message: 'Amount exceeds pending balance', severity: 'error' });
+            return;
+        }
+
+        setProcessing(true);
         try {
-            // TODO: Implement actual payout API
-            // await client.post('/admin/payouts', { buddyId: selectedBuddy.buddy.id, amount: parseFloat(payoutAmount) });
+            await apiClient.post('/admin/payouts', {
+                buddyId: selectedBuddy.buddyId,
+                amount,
+                reference: payoutReference || undefined,
+            });
 
-            setSnackbar({ open: true, message: `Payout of ₹${payoutAmount} initiated for ${selectedBuddy.buddy.user.name}`, severity: 'success' });
+            setSnackbar({ open: true, message: `Payout of ₹${amount.toLocaleString('en-IN')} processed for ${selectedBuddy.name}`, severity: 'success' });
             setPayoutDialogOpen(false);
-            fetchPayouts();
+            fetchPayouts(); // Refresh data
         } catch (err: any) {
-            setSnackbar({ open: true, message: err.message || 'Failed to process payout', severity: 'error' });
+            setSnackbar({ open: true, message: err.response?.data?.message || 'Failed to process payout', severity: 'error' });
+        } finally {
+            setProcessing(false);
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'COMPLETED': return 'success';
-            case 'PENDING': return 'warning';
-            case 'PROCESSING': return 'info';
-            case 'FAILED': return 'error';
-            default: return 'default';
-        }
-    };
+    // Client-side search filter
+    const filteredPayouts = payouts.filter((p) => {
+        if (!searchTerm) return true;
+        const q = searchTerm.toLowerCase();
+        return p.name.toLowerCase().includes(q) || p.phone?.includes(q);
+    });
 
-    // Summary cards data
+    // Summary calculations
+    const totalPending = payouts.reduce((sum, p) => sum + p.pendingAmount, 0);
+    const totalPaid = payouts.reduce((sum, p) => sum + p.totalPaid, 0);
+    const buddiesWithPending = payouts.filter((p) => p.pendingAmount > 0).length;
+
     const summaryCards = [
         {
             title: 'Total Pending Payouts',
-            value: '₹0',
+            value: `₹${totalPending.toLocaleString('en-IN')}`,
             icon: <AccountBalanceIcon />,
             color: COLORS.warning,
         },
         {
-            title: 'Payouts This Month',
-            value: '₹0',
+            title: 'Total Paid Out',
+            value: `₹${totalPaid.toLocaleString('en-IN')}`,
             icon: <TrendingUpIcon />,
             color: COLORS.success,
         },
         {
             title: 'Buddies with Pending',
-            value: '0',
+            value: buddiesWithPending.toString(),
             icon: <PaymentIcon />,
             color: COLORS.info,
         },
@@ -148,11 +153,21 @@ const BuddyPayoutsPage: React.FC = () => {
 
     return (
         <Box>
-            <Box sx={{ mb: 3 }}>
-                <Typography variant="h1" sx={{ mb: 1 }}>Buddy Payouts</Typography>
-                <Typography variant="body1" color="text.secondary">
-                    Manage and process buddy earnings payouts
-                </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+                <Box>
+                    <Typography variant="h1" sx={{ mb: 1 }}>Buddy Payouts</Typography>
+                    <Typography variant="body1" color="text.secondary">
+                        Manage and process buddy earnings payouts
+                    </Typography>
+                </Box>
+                <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchPayouts}
+                    disabled={loading}
+                >
+                    Refresh
+                </Button>
             </Box>
 
             {/* Summary Cards */}
@@ -166,7 +181,7 @@ const BuddyPayoutsPage: React.FC = () => {
                                         {card.title}
                                     </Typography>
                                     <Typography variant="h3" fontWeight={700} color={COLORS.charcoal}>
-                                        {card.value}
+                                        {loading ? <Skeleton width={80} /> : card.value}
                                     </Typography>
                                 </Box>
                                 <Box
@@ -194,7 +209,7 @@ const BuddyPayoutsPage: React.FC = () => {
                     {/* Toolbar */}
                     <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${COLORS.lightGray}` }}>
                         <TextField
-                            placeholder="Search by buddy name..."
+                            placeholder="Search by buddy name or phone..."
                             variant="outlined"
                             size="small"
                             sx={{ width: 300 }}
@@ -212,6 +227,7 @@ const BuddyPayoutsPage: React.FC = () => {
                         />
                     </Box>
 
+                    {loading && <LinearProgress />}
                     {error && <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>}
 
                     <TableContainer>
@@ -219,10 +235,10 @@ const BuddyPayoutsPage: React.FC = () => {
                             <TableHead sx={{ bgcolor: COLORS.offWhite }}>
                                 <TableRow>
                                     <TableCell>Buddy</TableCell>
-                                    <TableCell>Total Earnings</TableCell>
-                                    <TableCell>Pending Amount</TableCell>
-                                    <TableCell>Last Payout</TableCell>
-                                    <TableCell>Status</TableCell>
+                                    <TableCell align="right">Total Jobs</TableCell>
+                                    <TableCell align="right">Total Earnings</TableCell>
+                                    <TableCell align="right">Total Paid</TableCell>
+                                    <TableCell align="right">Pending Amount</TableCell>
                                     <TableCell align="center">Actions</TableCell>
                                 </TableRow>
                             </TableHead>
@@ -238,68 +254,57 @@ const BuddyPayoutsPage: React.FC = () => {
                                             <TableCell><Skeleton variant="text" /></TableCell>
                                         </TableRow>
                                     ))
-                                ) : payouts.length > 0 ? (
-                                    payouts.map((payout) => (
-                                        <TableRow key={payout.id} hover>
+                                ) : filteredPayouts.length > 0 ? (
+                                    filteredPayouts.map((payout) => (
+                                        <TableRow key={payout.buddyId} hover>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                                    <Avatar src={payout.buddy.user.profileImage} sx={{ bgcolor: COLORS.primary }}>
-                                                        {payout.buddy.user.name?.charAt(0)}
+                                                    <Avatar sx={{ bgcolor: COLORS.primary }}>
+                                                        {payout.name?.charAt(0)}
                                                     </Avatar>
                                                     <Box>
                                                         <Typography variant="subtitle2" fontWeight={600}>
-                                                            {payout.buddy.user.name}
+                                                            {payout.name}
                                                         </Typography>
                                                         <Typography variant="caption" color="text.secondary">
-                                                            {payout.buddy.user.email}
+                                                            {payout.phone}
                                                         </Typography>
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell align="right">
+                                                <Typography variant="body2">{payout.totalJobs}</Typography>
+                                            </TableCell>
+                                            <TableCell align="right">
                                                 <Typography variant="body2" fontWeight={600}>
                                                     ₹{payout.totalEarnings.toLocaleString('en-IN')}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell>
-                                                <Typography
-                                                    variant="body2"
-                                                    fontWeight={600}
-                                                    color={payout.pendingAmount > 0 ? 'warning.main' : 'text.primary'}
-                                                >
-                                                    ₹{payout.pendingAmount.toLocaleString('en-IN')}
+                                            <TableCell align="right">
+                                                <Typography variant="body2" color="success.main" fontWeight={600}>
+                                                    ₹{payout.totalPaid.toLocaleString('en-IN')}
                                                 </Typography>
                                             </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2">
-                                                    {payout.lastPayoutDate
-                                                        ? dayjs(payout.lastPayoutDate).format('MMM D, YYYY')
-                                                        : 'Never'
-                                                    }
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
+                                            <TableCell align="right">
                                                 <Chip
-                                                    label={payout.status}
-                                                    color={getStatusColor(payout.status) as any}
+                                                    label={`₹${payout.pendingAmount.toLocaleString('en-IN')}`}
+                                                    color={payout.pendingAmount > 0 ? 'warning' : 'success'}
                                                     size="small"
+                                                    variant={payout.pendingAmount > 0 ? 'filled' : 'outlined'}
                                                 />
                                             </TableCell>
                                             <TableCell align="center">
-                                                <Tooltip title="View Details">
-                                                    <IconButton color="primary" size="small">
-                                                        <ViewIcon />
-                                                    </IconButton>
-                                                </Tooltip>
                                                 <Tooltip title="Process Payout">
-                                                    <IconButton
-                                                        color="success"
-                                                        size="small"
-                                                        onClick={() => handleOpenPayoutDialog(payout)}
-                                                        disabled={payout.pendingAmount <= 0}
-                                                    >
-                                                        <PaymentIcon />
-                                                    </IconButton>
+                                                    <span>
+                                                        <IconButton
+                                                            color="success"
+                                                            size="small"
+                                                            onClick={() => handleOpenPayoutDialog(payout)}
+                                                            disabled={payout.pendingAmount <= 0}
+                                                        >
+                                                            <PaymentIcon />
+                                                        </IconButton>
+                                                    </span>
                                                 </Tooltip>
                                             </TableCell>
                                         </TableRow>
@@ -309,7 +314,7 @@ const BuddyPayoutsPage: React.FC = () => {
                                         <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                                             <AccountBalanceIcon sx={{ fontSize: 48, color: COLORS.lightGray, mb: 2 }} />
                                             <Typography color="text.secondary" sx={{ mb: 1 }}>
-                                                No payout data available
+                                                {searchTerm ? 'No buddies match your search' : 'No payout data available'}
                                             </Typography>
                                             <Typography variant="body2" color="text.secondary">
                                                 Buddy payout information will appear here once buddies complete jobs
@@ -320,21 +325,6 @@ const BuddyPayoutsPage: React.FC = () => {
                             </TableBody>
                         </Table>
                     </TableContainer>
-
-                    {payouts.length > 0 && (
-                        <TablePagination
-                            rowsPerPageOptions={[5, 10, 25]}
-                            component="div"
-                            count={payouts.length}
-                            rowsPerPage={rowsPerPage}
-                            page={page}
-                            onPageChange={(_, p) => setPage(p)}
-                            onRowsPerPageChange={(e) => {
-                                setRowsPerPage(parseInt(e.target.value, 10));
-                                setPage(0);
-                            }}
-                        />
-                    )}
                 </CardContent>
             </Card>
 
@@ -346,15 +336,15 @@ const BuddyPayoutsPage: React.FC = () => {
                         <Stack spacing={3} sx={{ mt: 2 }}>
                             <Paper variant="outlined" sx={{ p: 2 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Avatar src={selectedBuddy.buddy.user.profileImage} sx={{ width: 48, height: 48 }}>
-                                        {selectedBuddy.buddy.user.name?.charAt(0)}
+                                    <Avatar sx={{ width: 48, height: 48, bgcolor: COLORS.primary }}>
+                                        {selectedBuddy.name?.charAt(0)}
                                     </Avatar>
                                     <Box>
                                         <Typography variant="subtitle1" fontWeight={600}>
-                                            {selectedBuddy.buddy.user.name}
+                                            {selectedBuddy.name}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            {selectedBuddy.buddy.user.email}
+                                            {selectedBuddy.phone}
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -363,6 +353,10 @@ const BuddyPayoutsPage: React.FC = () => {
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography color="text.secondary">Total Earnings:</Typography>
                                 <Typography fontWeight={600}>₹{selectedBuddy.totalEarnings.toLocaleString('en-IN')}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Typography color="text.secondary">Already Paid:</Typography>
+                                <Typography fontWeight={600} color="success.main">₹{selectedBuddy.totalPaid.toLocaleString('en-IN')}</Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography color="text.secondary">Pending Amount:</Typography>
@@ -380,19 +374,38 @@ const BuddyPayoutsPage: React.FC = () => {
                                         startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                                     },
                                 }}
+                                helperText={`Max: ₹${selectedBuddy.pendingAmount.toLocaleString('en-IN')}`}
                             />
+
+                            <TextField
+                                label="Reference / Transaction ID (Optional)"
+                                value={payoutReference}
+                                onChange={(e) => setPayoutReference(e.target.value)}
+                                fullWidth
+                                placeholder="e.g., UTR number, bank transfer ref"
+                            />
+
+                            {selectedBuddy.bankDetails && (
+                                <Paper variant="outlined" sx={{ p: 2, bgcolor: COLORS.offWhite }}>
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Bank Details</Typography>
+                                    <Typography variant="body2">Account: {selectedBuddy.bankDetails.accountNumber || 'N/A'}</Typography>
+                                    <Typography variant="body2">IFSC: {selectedBuddy.bankDetails.ifscCode || 'N/A'}</Typography>
+                                    <Typography variant="body2">Bank: {selectedBuddy.bankDetails.bankName || 'N/A'}</Typography>
+                                </Paper>
+                            )}
                         </Stack>
                     )}
                 </DialogContent>
                 <DialogActions sx={{ p: 3 }}>
-                    <Button onClick={() => setPayoutDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setPayoutDialogOpen(false)} disabled={processing}>Cancel</Button>
                     <Button
                         variant="contained"
                         color="success"
                         onClick={handleProcessPayout}
                         startIcon={<PaymentIcon />}
+                        disabled={processing || !payoutAmount || parseFloat(payoutAmount) <= 0}
                     >
-                        Process Payout
+                        {processing ? 'Processing...' : 'Process Payout'}
                     </Button>
                 </DialogActions>
             </Dialog>

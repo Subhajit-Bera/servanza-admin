@@ -58,8 +58,8 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ initialStatus = '',
 
     // Filters
     const [search, setSearch] = useState('');
-    const [status, setStatus] = useState(initialStatus);
-    const [method, setMethod] = useState('');
+    const [status, setStatus] = useState(initialStatus || 'all');
+    const [method, setMethod] = useState('all');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(20);
 
@@ -85,8 +85,8 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ initialStatus = '',
         dispatch(fetchTransactions({
             page: page + 1,
             limit: rowsPerPage,
-            status: status || undefined,
-            method: method || undefined,
+            status: status === 'all' ? undefined : status,
+            method: method === 'all' ? undefined : method,
             search: search || undefined,
         }));
     };
@@ -175,7 +175,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ initialStatus = '',
                             label="Status"
                             onChange={(e) => setStatus(e.target.value)}
                         >
-                            <MenuItem value="">All</MenuItem>
+                            <MenuItem value="all">All</MenuItem>
                             <MenuItem value="PENDING">Pending</MenuItem>
                             <MenuItem value="COMPLETED">Completed</MenuItem>
                             <MenuItem value="FAILED">Failed</MenuItem>
@@ -190,7 +190,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({ initialStatus = '',
                             label="Method"
                             onChange={(e) => setMethod(e.target.value)}
                         >
-                            <MenuItem value="">All</MenuItem>
+                            <MenuItem value="all">All</MenuItem>
                             <MenuItem value="PREPAID">Prepaid</MenuItem>
                             <MenuItem value="CASH">Cash</MenuItem>
                         </Select>

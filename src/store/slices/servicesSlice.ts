@@ -252,9 +252,14 @@ const servicesSlice = createSlice({
                 }
             })
 
-            // Delete
+            // Delete (Soft Toggle)
             .addCase(deleteService.fulfilled, (state, action) => {
-                state.services = state.services.filter(s => s.id !== action.payload);
+                // Soft delete: toggle isActive in the local state
+                const id = action.payload;
+                const index = state.services.findIndex(s => s.id === id);
+                if (index !== -1) {
+                    state.services[index].isActive = !state.services[index].isActive;
+                }
             })
 
             // Upload Service Image (Single)
