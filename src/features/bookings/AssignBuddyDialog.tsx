@@ -13,7 +13,8 @@ import {
     Typography,
     TextField,
     Box,
-    CircularProgress
+    CircularProgress,
+    Alert
 } from '@mui/material';
 import { Person as PersonIcon, Search as SearchIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
@@ -35,9 +36,11 @@ const AssignBuddyDialog: React.FC<AssignBuddyDialogProps> = ({ open, onClose, bo
     const [search, setSearch] = useState('');
     const [selectedBuddyId, setSelectedBuddyId] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [assignError, setAssignError] = useState<string | null>(null);
 
     useEffect(() => {
         if (open) {
+            setAssignError(null);
             dispatch(fetchAvailableBuddies({
                 scheduledStart: booking.scheduledStart,
                 scheduledEnd: booking.scheduledEnd,
@@ -58,11 +61,13 @@ const AssignBuddyDialog: React.FC<AssignBuddyDialogProps> = ({ open, onClose, bo
     const handleAssign = async () => {
         if (!selectedBuddyId) return;
         setSubmitting(true);
+        setAssignError(null);
         try {
             await dispatch(assignBuddy({ bookingId: booking.id, buddyId: selectedBuddyId })).unwrap();
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to assign buddy:', error);
+            setAssignError(typeof error === 'string' ? error : 'Failed to assign buddy');
         } finally {
             setSubmitting(false);
         }
@@ -85,6 +90,12 @@ const AssignBuddyDialog: React.FC<AssignBuddyDialogProps> = ({ open, onClose, bo
                         <SearchIcon />
                     </Button>
                 </Box>
+                
+                {assignError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {assignError}
+                    </Alert>
+                )}
 
                 {loading ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
@@ -116,6 +127,8 @@ const AssignBuddyDialog: React.FC<AssignBuddyDialogProps> = ({ open, onClose, bo
                                     </Avatar>
                                 </ListItemAvatar>
                                 <ListItemText
+                                    primaryTypographyProps={{ component: 'div' } as any}
+                                    secondaryTypographyProps={{ component: 'div' } as any}
                                     primary={
                                         <Box display="flex" alignItems="center" gap={1}>
                                             <Typography fontWeight={500}>{buddy.user.name}</Typography>

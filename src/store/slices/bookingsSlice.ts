@@ -204,14 +204,17 @@ const bookingsSlice = createSlice({
             })
             // Assign Buddy
             .addCase(assignBuddy.fulfilled, (state, action) => {
-                if (state.selectedBooking && state.selectedBooking.id === action.payload.id) {
-                    state.selectedBooking = action.payload;
+                const updatedBooking = action.payload?.data?.booking || action.payload;
+                if (!updatedBooking || !updatedBooking.id) return;
+                
+                if (state.selectedBooking && state.selectedBooking.id === updatedBooking.id) {
+                    state.selectedBooking = updatedBooking;
                 }
                 // Also update list item if needed
-                const index = state.list.findIndex(b => b.id === action.payload.id);
+                const index = state.list.findIndex(b => b.id === updatedBooking.id);
                 if (index !== -1) {
                     // Replace the entire booking object in the list with the updated one from payload
-                    state.list[index] = action.payload;
+                    state.list[index] = updatedBooking;
                 }
             });
     },
