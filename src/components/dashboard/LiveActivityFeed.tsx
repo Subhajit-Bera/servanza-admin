@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Paper, Typography, List, ListItem, ListItemText, ListItemAvatar, Badge, Divider } from '@mui/material';
-import { Notifications as NotificationsIcon, Assignment, CheckCircle, Cancel, PersonAdd, Info } from '@mui/icons-material';
+import { Notifications as NotificationsIcon, Assignment, CheckCircle, Cancel, PersonAdd, Info, Warning, ErrorOutline } from '@mui/icons-material';
 import { useAppSelector } from '../../store/hooks'; // Adjust path if needed
 import { getSocket } from '../../utils/socket';
 import dayjs from 'dayjs';
@@ -23,6 +23,9 @@ const getIcon = (type: string) => {
         case 'BOOKING_ACCEPTED': return <PersonAdd color="secondary" />;
         case 'BOOKING_COMPLETED': return <CheckCircle color="success" />;
         case 'BOOKING_CANCELLED': return <Cancel color="error" />;
+        case 'BOOKING_ESCALATED': return <ErrorOutline color="error" />;
+        case 'LOW_CANDIDATES_CRITICAL': return <ErrorOutline color="error" />;
+        case 'LOW_CANDIDATES_WARNING': return <Warning color="warning" />;
         default: return <Info color="disabled" />;
     }
 };
@@ -41,10 +44,43 @@ export const LiveActivityFeed: React.FC = () => {
             setActivities((prev) => [data, ...prev].slice(0, 10)); // Keep last 10
         };
 
+        // Handle low-candidate alerts for instant bookings
+        const handleLowCandidates = (data: any) => {
+            console.log('Received low-candidates alert:', data);
+            const buddyNames = data.candidateBuddies?.map((b: any) => b.buddyName).join(', ') || '';
+            const feedItem: FeedItem = {
+                type: data.severity === 'critical' ? 'LOW_CANDIDATES_CRITICAL' : 'LOW_CANDIDATES_WARNING',
+                title: data.severity === 'critical' ? '⚠️ No Buddies Found' : '⚠️ Low Buddy Count',
+                message: data.candidateCount === 0
+                    ? `No buddy found for "${data.serviceTitle}" at ${data.address || 'unknown location'}. Auto-retry in 60s.`
+                    : `Only ${data.candidateCount} buddy(s) found for "${data.serviceTitle}": ${buddyNames}`,
+                timestamp: data.timestamp || new Date().toISOString(),
+                data,
+            };
+            setActivities((prev) => [feedItem, ...prev].slice(0, 15));
+        };
+
+        // Handle escalation alerts
+        const handleEscalated = (data: any) => {
+            console.log('Received escalated alert:', data);
+            const feedItem: FeedItem = {
+                type: 'BOOKING_ESCALATED',
+                title: '🚨 Booking Escalated',
+                message: `"${data.serviceTitle}" needs admin attention. ${data.reason || 'No buddy accepted.'}`,
+                timestamp: data.escalatedAt || new Date().toISOString(),
+                data,
+            };
+            setActivities((prev) => [feedItem, ...prev].slice(0, 15));
+        };
+
         socket.on('admin:feed', handleAdminFeed);
+        socket.on('booking:low-candidates', handleLowCandidates);
+        socket.on('booking:escalated', handleEscalated);
 
         return () => {
             socket.off('admin:feed', handleAdminFeed);
+            socket.off('booking:low-candidates', handleLowCandidates);
+            socket.off('booking:escalated', handleEscalated);
         };
     }, [token]);
 
