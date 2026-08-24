@@ -40,9 +40,10 @@ import {
     fetchServices,
     createCategory,
     updateCategory,
-    deleteCategory,
+    toggleCategoryStatus,
     uploadCategoryIcon
 } from '../../store/slices/servicesSlice';
+import { ConfirmDialog } from '../../components/common';
 import { COLORS, SHADOWS } from '../../theme';
 
 interface CategoryForm {
@@ -179,8 +180,11 @@ const CategoriesPage: React.FC = () => {
     const handleConfirmDelete = async () => {
         if (categoryToDelete) {
             try {
-                await dispatch(deleteCategory(categoryToDelete.id)).unwrap();
-                setSnackbar({ open: true, message: 'Category deleted successfully!', severity: 'success' });
+                await dispatch(toggleCategoryStatus({ 
+                    id: categoryToDelete.id, 
+                    isActive: categoryToDelete.isActive === false ? true : false 
+                })).unwrap();
+                setSnackbar({ open: true, message: `Category ${categoryToDelete.isActive === false ? 'activated' : 'deactivated'} successfully!`, severity: 'success' });
                 setDeleteDialogOpen(false);
                 setCategoryToDelete(null);
             } catch (error: any) {
@@ -432,22 +436,39 @@ const CategoriesPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-                <DialogTitle>{categoryToDelete?.isActive === false ? 'Activate Category' : 'Deactivate Category'}</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        Are you sure you want to {categoryToDelete?.isActive === false ? 'activate' : 'deactivate'} "{categoryToDelete?.name}"?
-                        {categoryToDelete?.isActive !== false && " This will hide it from the user app."}
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-                    <Button variant="contained" color={categoryToDelete?.isActive === false ? "success" : "error"} onClick={handleConfirmDelete}>
-                        {categoryToDelete?.isActive === false ? 'Activate' : 'Deactivate'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                title={categoryToDelete?.isActive === false ? 'Activate Category' : 'Deactivate Category'}
+                confirmText={categoryToDelete?.isActive === false ? 'Activate' : 'Deactivate'}
+                confirmColor={categoryToDelete?.isActive === false ? "success" : "error"}
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setDeleteDialogOpen(false)}
+                message={
+                    <>
+                        <Typography gutterBottom>
+                            Are you sure you want to {categoryToDelete?.isActive === false ? 'activate' : 'deactivate'} "{categoryToDelete?.name}"?
+                        </Typography>
+                        {categoryToDelete?.isActive !== false && getServiceCount(categoryToDelete?.id) > 0 && (
+                            <Alert severity="warning" sx={{ mt: 2 }}>
+                                <Typography variant="body2" fontWeight={600} gutterBottom>
+                                    Warning: Cascade Deactivation
+                                </Typography>
+                                <Typography variant="body2">
+                                    Deactivating this category will automatically deactivate {getServiceCount(categoryToDelete?.id)} associated service(s):
+                                </Typography>
+                                <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                                    {services.filter(s => s.categoryId === categoryToDelete?.id).slice(0, 5).map(s => (
+                                        <li key={s.id}><Typography variant="caption">{s.title}</Typography></li>
+                                    ))}
+                                    {getServiceCount(categoryToDelete?.id) > 5 && (
+                                        <li><Typography variant="caption">...and {getServiceCount(categoryToDelete?.id) - 5} more</Typography></li>
+                                    )}
+                                </ul>
+                            </Alert>
+                        )}
+                    </>
+                }
+            />
 
             <Snackbar
                 open={snackbar.open}

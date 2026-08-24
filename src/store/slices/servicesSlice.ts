@@ -20,7 +20,7 @@ export const fetchServices = createAsyncThunk(
     'services/fetchServices',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await client.get<any>('/services');
+            const response = await client.get<any>('/admin/services');
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to fetch services');
@@ -44,7 +44,7 @@ export const fetchCategories = createAsyncThunk(
     'services/fetchCategories',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await client.get<any>('/services/categories');
+            const response = await client.get<any>('/admin/categories');
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to fetch categories');
@@ -54,9 +54,9 @@ export const fetchCategories = createAsyncThunk(
 
 export const createCategory = createAsyncThunk(
     'services/createCategory',
-    async (payload: { name: string; slug: string; description?: string; icon?: string }, { rejectWithValue }) => {
+    async (payload: { name: string; slug: string; description?: string; icon?: string; isActive?: boolean }, { rejectWithValue }) => {
         try {
-            const response = await client.post<any>('/services/categories', payload);
+            const response = await client.post<any>('/admin/categories', payload);
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to create category');
@@ -66,9 +66,9 @@ export const createCategory = createAsyncThunk(
 
 export const updateCategory = createAsyncThunk(
     'services/updateCategory',
-    async ({ id, payload }: { id: string; payload: { name: string; slug?: string; description?: string; icon?: string } }, { rejectWithValue }) => {
+    async ({ id, payload }: { id: string; payload: { name: string; slug?: string; description?: string; icon?: string; isActive?: boolean } }, { rejectWithValue }) => {
         try {
-            const response = await client.put<any>(`/services/categories/${id}`, payload);
+            const response = await client.put<any>(`/admin/categories/${id}`, payload);
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to update category');
@@ -80,7 +80,7 @@ export const createService = createAsyncThunk(
     'services/createService',
     async (payload: CreateServicePayload, { rejectWithValue }) => {
         try {
-            const response = await client.post<any>('/services', payload);
+            const response = await client.post<any>('/admin/services', payload);
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to create service');
@@ -92,7 +92,7 @@ export const updateService = createAsyncThunk(
     'services/updateService',
     async ({ id, payload }: { id: string; payload: UpdateServicePayload }, { rejectWithValue }) => {
         try {
-            const response = await client.put<any>(`/services/${id}`, payload);
+            const response = await client.put<any>(`/admin/services/${id}`, payload);
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to update service');
@@ -104,10 +104,22 @@ export const deleteService = createAsyncThunk(
     'services/deleteService',
     async (id: string, { rejectWithValue }) => {
         try {
-            await client.delete(`/services/${id}`);
+            await client.delete(`/admin/services/${id}`);
             return id;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to delete service');
+        }
+    }
+);
+
+export const toggleServiceStatus = createAsyncThunk(
+    'services/toggleServiceStatus',
+    async ({ id, isActive }: { id: string; isActive: boolean }, { rejectWithValue }) => {
+        try {
+            const response = await client.patch<any>(`/admin/services/${id}/status`, { isActive });
+            return response.data;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to toggle service status');
         }
     }
 );
@@ -165,12 +177,25 @@ export const uploadCategoryIcon = createAsyncThunk(
     }
 );
 
-// Delete category
+// Toggle Category Status
+export const toggleCategoryStatus = createAsyncThunk(
+    'services/toggleCategoryStatus',
+    async ({ id, isActive }: { id: string; isActive: boolean }, { rejectWithValue }) => {
+        try {
+            const response = await client.patch<any>(`/admin/categories/${id}/status`, { isActive });
+            return response.data?.data || response.data;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to toggle category status');
+        }
+    }
+);
+
+// Delete category (Hard Delete - if you still need it, else we use toggleCategoryStatus)
 export const deleteCategory = createAsyncThunk(
     'services/deleteCategory',
     async (id: string, { rejectWithValue }) => {
         try {
-            await client.delete(`/services/categories/${id}`);
+            await client.delete(`/admin/categories/${id}`);
             return id;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to delete category');
@@ -230,9 +255,21 @@ const servicesSlice = createSlice({
                 }
             })
 
-            // Delete Category
+            // Toggle Category Status
+            .addCase(toggleCategoryStatus.fulfilled, (state, action) => {
+                const updatedCategory = action.payload.data || action.payload;
+                const index = state.categories.findIndex(c => c.id === updatedCategory.id);
+                if (index !== -1) {
+                    state.categories[index] = updatedCategory;
+                }
+            })
+
+            // Delete Category (Soft Toggle via old deleteCategory action if it was used for soft-delete)
             .addCase(deleteCategory.fulfilled, (state, action) => {
-                state.categories = state.categories.filter(c => c.id !== action.payload);
+                const index = state.categories.findIndex(c => c.id === action.payload);
+                if (index !== -1) {
+                    state.categories[index].isActive = !state.categories[index].isActive;
+                }
             })
 
             // Create
@@ -245,6 +282,14 @@ const servicesSlice = createSlice({
 
             // Update
             .addCase(updateService.fulfilled, (state, action) => {
+                const updatedService = action.payload.data || action.payload;
+                const index = state.services.findIndex(s => s.id === updatedService.id);
+                if (index !== -1) {
+                    state.services[index] = updatedService;
+                }
+            })
+            // Toggle Service Status
+            .addCase(toggleServiceStatus.fulfilled, (state, action) => {
                 const updatedService = action.payload.data || action.payload;
                 const index = state.services.findIndex(s => s.id === updatedService.id);
                 if (index !== -1) {

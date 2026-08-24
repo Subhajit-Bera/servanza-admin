@@ -53,12 +53,12 @@ const CouponsPage: React.FC = () => {
 
     const [formData, setFormData] = useState<CreateCouponPayload>({
         code: '',
+        name: '',
         discountType: 'PERCENTAGE',
         discountValue: 0,
-        maxDiscountAmount: null,
+        maxDiscount: null,
         minOrderAmount: null,
-        validFrom: dayjs().format('YYYY-MM-DDTHH:mm'),
-        validUntil: null,
+        expiresAt: dayjs().add(7, 'day').format('YYYY-MM-DDTHH:mm'),
         isActive: true,
         usageLimit: null,
         description: '',
@@ -72,12 +72,12 @@ const CouponsPage: React.FC = () => {
         setEditingCoupon(null);
         setFormData({
             code: '',
+            name: '',
             discountType: 'PERCENTAGE',
             discountValue: 0,
-            maxDiscountAmount: null,
+            maxDiscount: null,
             minOrderAmount: null,
-            validFrom: dayjs().format('YYYY-MM-DDTHH:mm'),
-            validUntil: null,
+            expiresAt: dayjs().add(7, 'day').format('YYYY-MM-DDTHH:mm'),
             isActive: true,
             usageLimit: null,
             description: '',
@@ -89,12 +89,12 @@ const CouponsPage: React.FC = () => {
         setEditingCoupon(coupon);
         setFormData({
             code: coupon.code,
+            name: coupon.name,
             discountType: coupon.discountType,
             discountValue: coupon.discountValue,
-            maxDiscountAmount: coupon.maxDiscountAmount || null,
+            maxDiscount: coupon.maxDiscount || null,
             minOrderAmount: coupon.minOrderAmount || null,
-            validFrom: dayjs(coupon.validFrom).format('YYYY-MM-DDTHH:mm'),
-            validUntil: coupon.validUntil ? dayjs(coupon.validUntil).format('YYYY-MM-DDTHH:mm') : null,
+            expiresAt: dayjs(coupon.expiresAt).format('YYYY-MM-DDTHH:mm'),
             isActive: coupon.isActive,
             usageLimit: coupon.usageLimit || null,
             description: coupon.description || '',
@@ -110,18 +110,17 @@ const CouponsPage: React.FC = () => {
     const handleSubmit = async () => {
         try {
             // Validation
-            if (!formData.code || formData.discountValue <= 0) {
-                throw new Error("Please provide valid code and discount value.");
+            if (!formData.code || formData.discountValue <= 0 || !formData.name || !formData.expiresAt) {
+                throw new Error("Please provide valid code, name, discount value, and expiry date.");
             }
 
             // Convert to appropriate types
             const payload = {
                 ...formData,
                 discountValue: Number(formData.discountValue),
-                maxDiscountAmount: formData.maxDiscountAmount ? Number(formData.maxDiscountAmount) : null,
+                maxDiscount: formData.maxDiscount ? Number(formData.maxDiscount) : null,
                 minOrderAmount: formData.minOrderAmount ? Number(formData.minOrderAmount) : null,
                 usageLimit: formData.usageLimit ? Number(formData.usageLimit) : null,
-                validUntil: formData.validUntil ? formData.validUntil : null,
                 code: formData.code.toUpperCase(),
             };
 
@@ -176,11 +175,11 @@ const CouponsPage: React.FC = () => {
                         <TableHead sx={{ bgcolor: COLORS.offWhite }}>
                             <TableRow>
                                 <TableCell>Code</TableCell>
+                                <TableCell>Name</TableCell>
                                 <TableCell>Discount</TableCell>
                                 <TableCell>Usage limit</TableCell>
                                 <TableCell>Used Count</TableCell>
-                                <TableCell>Valid From</TableCell>
-                                <TableCell>Valid Until</TableCell>
+                                <TableCell>Expires At</TableCell>
                                 <TableCell>Status</TableCell>
                                 <TableCell align="center">Actions</TableCell>
                             </TableRow>
@@ -202,12 +201,15 @@ const CouponsPage: React.FC = () => {
                                             </Box>
                                         </TableCell>
                                         <TableCell>
+                                            <Typography variant="body2">{coupon.name}</Typography>
+                                        </TableCell>
+                                        <TableCell>
                                             <Typography variant="body2" fontWeight={600}>
                                                 {coupon.discountType === 'PERCENTAGE' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`}
                                             </Typography>
-                                            {coupon.maxDiscountAmount && (
+                                            {coupon.maxDiscount && (
                                                 <Typography variant="caption" color="text.secondary" display="block">
-                                                    Upto ₹{coupon.maxDiscountAmount}
+                                                    Upto ₹{coupon.maxDiscount}
                                                 </Typography>
                                             )}
                                             {coupon.minOrderAmount && (
@@ -218,8 +220,7 @@ const CouponsPage: React.FC = () => {
                                         </TableCell>
                                         <TableCell>{coupon.usageLimit ? coupon.usageLimit : 'Unlimited'}</TableCell>
                                         <TableCell>{coupon.usedCount || 0}</TableCell>
-                                        <TableCell>{formatDate(coupon.validFrom)}</TableCell>
-                                        <TableCell>{formatDate(coupon.validUntil)}</TableCell>
+                                        <TableCell>{formatDate(coupon.expiresAt)}</TableCell>
                                         <TableCell>
                                             <Chip
                                                 label={coupon.isActive ? 'Active' : 'Inactive'}
@@ -270,6 +271,14 @@ const CouponsPage: React.FC = () => {
                             inputProps={{ style: { textTransform: 'uppercase' } }}
                         />
                         <TextField
+                            label="Coupon Name"
+                            value={formData.name}
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            required
+                            fullWidth
+                            placeholder="e.g. Summer Sale"
+                        />
+                        <TextField
                             label="Description"
                             value={formData.description || ''}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -304,8 +313,8 @@ const CouponsPage: React.FC = () => {
                                 <TextField
                                     label="Max Discount Amount (₹) (Optional)"
                                     type="number"
-                                    value={formData.maxDiscountAmount || ''}
-                                    onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value ? Number(e.target.value) : null })}
+                                    value={formData.maxDiscount || ''}
+                                    onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value ? Number(e.target.value) : null })}
                                     fullWidth
                                 />
                             )}
@@ -320,20 +329,13 @@ const CouponsPage: React.FC = () => {
 
                         <Stack direction="row" spacing={2}>
                             <TextField
-                                label="Valid From"
+                                label="Expiry Date"
                                 type="datetime-local"
-                                value={formData.validFrom}
-                                onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
+                                value={formData.expiresAt}
+                                onChange={(e) => setFormData({ ...formData, expiresAt: e.target.value })}
                                 InputLabelProps={{ shrink: true }}
                                 fullWidth
-                            />
-                            <TextField
-                                label="Valid Until (Optional)"
-                                type="datetime-local"
-                                value={formData.validUntil || ''}
-                                onChange={(e) => setFormData({ ...formData, validUntil: e.target.value || null })}
-                                InputLabelProps={{ shrink: true }}
-                                fullWidth
+                                required
                             />
                         </Stack>
 

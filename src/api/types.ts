@@ -387,12 +387,12 @@ export type DiscountType = (typeof DiscountType)[keyof typeof DiscountType];
 export interface Coupon {
     id: string;
     code: string;
+    name: string;
     discountType: string;
     discountValue: number;
-    maxDiscountAmount?: number;
+    maxDiscount?: number;
     minOrderAmount?: number;
-    validFrom: string;
-    validUntil?: string;
+    expiresAt: string;
     isActive: boolean;
     usageLimit?: number;
     usedCount: number;
@@ -405,12 +405,12 @@ export interface Coupon {
 
 export interface CreateCouponPayload {
     code: string;
+    name: string;
     discountType: string;
     discountValue: number;
-    maxDiscountAmount?: number | null;
+    maxDiscount?: number | null;
     minOrderAmount?: number | null;
-    validFrom: string;
-    validUntil?: string | null;
+    expiresAt: string;
     isActive?: boolean;
     usageLimit?: number | null;
     applicableServices?: string[];

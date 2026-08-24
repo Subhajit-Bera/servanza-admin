@@ -36,7 +36,7 @@ import type { AppDispatch, RootState } from '../../store';
 import { fetchPromotions, createPromotion, updatePromotion, deletePromotion, uploadPromotionImage } from '../../store/slices/promotionsSlice';
 
 import type { Promotion, CreatePromotionPayload } from '../../api/types';
-import { PermissionGate } from '../../components/common/PermissionGate';
+import { PermissionGate, ConfirmDialog } from '../../components/common';
 
 const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YwZjBmMCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPk5vIEltYWdlPC90ZXh0Pjwvc3ZnPg==';
 
@@ -417,21 +417,15 @@ const PromotionsPage: React.FC = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Confirmation */}
-            <Dialog open={!!deleteConfirmId} onClose={() => setDeleteConfirmId(null)}>
-                <DialogTitle>Delete Promotion?</DialogTitle>
-                <DialogContent>
-                    <Typography>
-                        Are you sure you want to delete this promotional banner? This action cannot be undone.
-                    </Typography>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
-                    <Button variant="contained" color="error" onClick={handleDelete}>
-                        Delete
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <ConfirmDialog
+                open={!!deleteConfirmId}
+                title="Delete Promotion?"
+                message="Are you sure you want to delete this promotional banner? This action cannot be undone."
+                confirmText="Delete"
+                confirmColor="error"
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteConfirmId(null)}
+            />
 
             {/* Snackbar */}
             <Snackbar

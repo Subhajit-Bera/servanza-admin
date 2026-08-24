@@ -32,14 +32,17 @@ import {
     Edit as EditIcon,
     Delete as DeleteIcon,
     CloudUpload as CloudUploadIcon,
-    ContentCopy as CopyIcon
+    ContentCopy as CopyIcon,
+    Visibility as VisibilityIcon,
+    VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store';
-import { fetchServices, fetchCategories, createService, createCategory, updateService, updateCategory, deleteService, uploadServiceImages, uploadCategoryIcon } from '../../store/slices/servicesSlice';
+import { fetchServices, fetchCategories, createService, createCategory, updateService, updateCategory, toggleServiceStatus, toggleCategoryStatus, uploadServiceImage, uploadServiceImages, uploadCategoryIcon } from '../../store/slices/servicesSlice';
 import { COLORS } from '../../theme/theme';
 import type { Service, Category } from '../../api/types';
 import { PermissionGate } from '../../components/common/PermissionGate';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -93,6 +96,9 @@ const ServicesPage = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [deleteSnackbar, setDeleteSnackbar] = useState({ open: false, message: '' });
+    const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+    const [serviceToToggle, setServiceToToggle] = useState<Service | null>(null);
+    const [categoryToToggle, setCategoryToToggle] = useState<Category | null>(null);
     // Multi-image support for services
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<{ file: File; preview: string }[]>([]);
@@ -100,6 +106,7 @@ const ServicesPage = () => {
 
     // File input ref
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         dispatch(fetchServices());
@@ -235,34 +242,37 @@ const ServicesPage = () => {
         handleDescriptionObjChange(field, arrayValue);
     };
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (modalType === 'CATEGORY') {
-            // Category: single icon upload
-            const file = e.target.files?.[0];
-            if (file) {
-                setSelectedFile(file);
+    const handlePrimaryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleGalleryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            if (existingImageUrls.length + imagePreviews.length + files.length > 5) {
+                alert('Maximum 5 gallery images allowed.');
+                if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
+                return;
+            }
+            setSelectedFiles((prev) => [...prev, ...files]);
+            files.forEach((file) => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    setImagePreview(reader.result as string);
+                    setImagePreviews((prev) => [...prev, { file, preview: reader.result as string }]);
                 };
                 reader.readAsDataURL(file);
-            }
-        } else {
-            // Service: multi-image upload
-            const files = Array.from(e.target.files || []);
-            if (files.length > 0) {
-                setSelectedFiles((prev) => [...prev, ...files]);
-                files.forEach((file) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setImagePreviews((prev) => [...prev, { file, preview: reader.result as string }]);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
+            });
         }
-        // Reset input so same file can be selected again
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
     };
 
     const handleRemoveNewImage = (indexToRemove: number) => {
@@ -278,14 +288,12 @@ const ServicesPage = () => {
         setIsSubmitting(true);
         try {
             if (modalType === 'SERVICE') {
-                // Validate required fields
                 if (!formData.categoryId) {
                     alert('Please select a category');
                     setIsSubmitting(false);
                     return;
                 }
 
-                // Build payload - categoryId is REQUIRED
                 const payload: any = {
                     title: formData.title,
                     categoryId: formData.categoryId,
@@ -308,12 +316,14 @@ const ServicesPage = () => {
                     serviceId = result.data?.id || result.id;
                 }
 
-                // Upload new images if files were selected
+                if (selectedFile && serviceId) {
+                    await dispatch(uploadServiceImage({ serviceId, file: selectedFile }) as any);
+                }
+
                 if (selectedFiles.length > 0 && serviceId) {
                     await dispatch(uploadServiceImages({ serviceId, files: selectedFiles }) as any);
                 }
             } else {
-                // Category payload
                 const payload = {
                     name: formData.name,
                     slug: generateSlug(formData.name),
@@ -329,7 +339,6 @@ const ServicesPage = () => {
                     categoryId = result.data?.id || result.id;
                 }
 
-                // Upload icon if file was selected
                 if (selectedFile && categoryId) {
                     await dispatch(uploadCategoryIcon({ categoryId, file: selectedFile }) as any);
                 }
@@ -369,7 +378,6 @@ const ServicesPage = () => {
                 </Tabs>
             </Box>
 
-            {/* Services Tab */}
             <CustomTabPanel value={tabValue} index={0}>
                 {loading ? (
                     <Typography>Loading services...</Typography>
@@ -431,14 +439,11 @@ const ServicesPage = () => {
                                                     size="small"
                                                     color={service.isActive ? 'error' : 'success'}
                                                     onClick={() => {
-                                                        if (window.confirm(`Are you sure you want to ${service.isActive ? 'deactivate' : 'activate'} "${service.title}"?`)) {
-                                                            dispatch(deleteService(service.id)).then(() => {
-                                                                setDeleteSnackbar({ open: true, message: `Service "${service.title}" ${service.isActive ? 'deactivated' : 'activated'}` });
-                                                            });
-                                                        }
+                                                        setServiceToToggle(service);
+                                                        setConfirmDialogOpen(true);
                                                     }}
                                                 >
-                                                    <DeleteIcon />
+                                                    {service.isActive ? <VisibilityOffIcon /> : <VisibilityIcon />}
                                                 </IconButton>
                                             </Tooltip>
                                         </PermissionGate>
@@ -457,7 +462,6 @@ const ServicesPage = () => {
                 )}
             </CustomTabPanel>
 
-            {/* Categories Tab */}
             <CustomTabPanel value={tabValue} index={1}>
                 {loading ? (
                     <Typography>Loading categories...</Typography>
@@ -467,7 +471,6 @@ const ServicesPage = () => {
                             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={category.id}>
                                 <Paper sx={{ p: 3, borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                        {/* Category Icon/Image */}
                                         <Avatar
                                             src={category.icon}
                                             sx={{ width: 48, height: 48, bgcolor: 'primary.light' }}
@@ -494,11 +497,26 @@ const ServicesPage = () => {
                                             </Tooltip>
                                         </Box>
                                     </Box>
-                                    <PermissionGate permission="services.edit">
-                                        <IconButton size="small" onClick={() => handleEditCategory(category)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                    </PermissionGate>
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <PermissionGate permission="services.edit">
+                                            <IconButton size="small" onClick={() => handleEditCategory(category)}>
+                                                <EditIcon />
+                                            </IconButton>
+                                        </PermissionGate>
+                                        <PermissionGate permission="services.delete">
+                                            <Tooltip title={category.isActive ? 'Deactivate Category' : 'Activate Category'}>
+                                                <IconButton
+                                                    size="small"
+                                                    color={category.isActive ? 'error' : 'success'}
+                                                    onClick={() => {
+                                                        setCategoryToToggle(category);
+                                                    }}
+                                                >
+                                                    {category.isActive ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                                </IconButton>
+                                            </Tooltip>
+                                        </PermissionGate>
+                                    </Box>
                                 </Paper>
                             </Grid>
                         ))}
@@ -513,28 +531,46 @@ const ServicesPage = () => {
                 )}
             </CustomTabPanel>
 
-            {/* Create/Edit Dialog */}
             <Dialog open={openModal} onClose={handleCloseModal} maxWidth="sm" fullWidth>
                 <DialogTitle>
                     {editingItem ? 'Edit' : 'Add New'} {modalType === 'SERVICE' ? 'Service' : 'Category'}
                 </DialogTitle>
                 <DialogContent>
                     <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {/* Image Upload Section */}
                         <Box sx={{ textAlign: 'center', mb: 2 }}>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                multiple={modalType === 'SERVICE'}
-                                ref={fileInputRef}
-                                style={{ display: 'none' }}
-                                onChange={handleImageUpload}
-                            />
                             {modalType === 'SERVICE' ? (
-                                /* Multi-image upload for services */
                                 <Box>
-                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Service Images</Typography>
-                                    {/* Existing images */}
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Primary Image (Single)</Typography>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        ref={fileInputRef}
+                                        style={{ display: 'none' }}
+                                        onChange={handlePrimaryImageUpload}
+                                    />
+                                    <Box
+                                        onClick={() => fileInputRef.current?.click()}
+                                        sx={{ width: 100, height: 100, mb: 3, border: '2px dashed', borderColor: 'grey.400', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', bgcolor: 'grey.100', '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' } }}
+                                    >
+                                        {imagePreview ? (
+                                            <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
+                                                <CloudUploadIcon sx={{ fontSize: 32 }} />
+                                                <Typography variant="caption" display="block">Upload Primary Image</Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
+
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>Gallery Images (Max 5)</Typography>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        ref={galleryFileInputRef}
+                                        style={{ display: 'none' }}
+                                        onChange={handleGalleryImageUpload}
+                                    />
                                     {existingImageUrls.length > 0 && (
                                         <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
                                             {existingImageUrls.map((url, idx) => (
@@ -551,7 +587,6 @@ const ServicesPage = () => {
                                             ))}
                                         </Stack>
                                     )}
-                                    {/* New image previews */}
                                     {imagePreviews.length > 0 && (
                                         <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
                                             {imagePreviews.map((item, idx) => (
@@ -569,29 +604,37 @@ const ServicesPage = () => {
                                         </Stack>
                                     )}
                                     <Box
-                                        onClick={() => fileInputRef.current?.click()}
+                                        onClick={() => galleryFileInputRef.current?.click()}
                                         sx={{ width: '100%', height: 80, border: '2px dashed', borderColor: 'grey.400', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', bgcolor: 'grey.100', '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' } }}
                                     >
                                         <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
                                             <CloudUploadIcon sx={{ fontSize: 28 }} />
-                                            <Typography variant="caption" display="block">Click to add images</Typography>
+                                            <Typography variant="caption" display="block">Click to add gallery images</Typography>
                                         </Box>
                                     </Box>
                                 </Box>
                             ) : (
-                                /* Single icon upload for categories */
-                                <Box
-                                    onClick={() => fileInputRef.current?.click()}
-                                    sx={{ width: 100, height: 100, mx: 'auto', border: '2px dashed', borderColor: 'grey.400', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', bgcolor: 'grey.100', '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' } }}
-                                >
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
-                                            <CloudUploadIcon sx={{ fontSize: 32 }} />
-                                            <Typography variant="caption" display="block">Upload Icon</Typography>
-                                        </Box>
-                                    )}
+                                <Box>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        ref={fileInputRef}
+                                        style={{ display: 'none' }}
+                                        onChange={handlePrimaryImageUpload}
+                                    />
+                                    <Box
+                                        onClick={() => fileInputRef.current?.click()}
+                                        sx={{ width: 100, height: 100, mx: 'auto', border: '2px dashed', borderColor: 'grey.400', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', bgcolor: 'grey.100', '&:hover': { borderColor: 'primary.main', bgcolor: 'grey.200' } }}
+                                    >
+                                        {imagePreview ? (
+                                            <img src={imagePreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <Box sx={{ textAlign: 'center', color: 'grey.600' }}>
+                                                <CloudUploadIcon sx={{ fontSize: 32 }} />
+                                                <Typography variant="caption" display="block">Upload Icon</Typography>
+                                            </Box>
+                                        )}
+                                    </Box>
                                 </Box>
                             )}
                         </Box>
@@ -766,6 +809,46 @@ const ServicesPage = () => {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <ConfirmDialog
+                open={confirmDialogOpen}
+                title={serviceToToggle?.isActive ? 'Deactivate Service' : 'Activate Service'}
+                message={`Are you sure you want to ${serviceToToggle?.isActive ? 'deactivate' : 'activate'} "${serviceToToggle?.title}"?`}
+                onConfirm={() => {
+                    if (serviceToToggle) {
+                        dispatch(toggleServiceStatus({ id: serviceToToggle.id, isActive: !serviceToToggle.isActive })).then(() => {
+                            setDeleteSnackbar({ open: true, message: `Service status updated` });
+                        });
+                    }
+                    setConfirmDialogOpen(false);
+                    setServiceToToggle(null);
+                }}
+                onCancel={() => {
+                    setConfirmDialogOpen(false);
+                    setServiceToToggle(null);
+                }}
+            />
+
+            <ConfirmDialog
+                open={!!categoryToToggle}
+                title={categoryToToggle?.isActive ? 'Deactivate Category' : 'Activate Category'}
+                message={categoryToToggle?.isActive 
+                    ? `Are you sure you want to deactivate "${categoryToToggle?.name}"? This will also deactivate all services under this category.`
+                    : `Are you sure you want to activate "${categoryToToggle?.name}"?`}
+                onConfirm={() => {
+                    if (categoryToToggle) {
+                        dispatch(toggleCategoryStatus({ id: categoryToToggle.id, isActive: !categoryToToggle.isActive })).then(() => {
+                            setDeleteSnackbar({ open: true, message: `Category status updated` });
+                            // Fetch services again since backend may have cascade deactivated them
+                            dispatch(fetchServices());
+                        });
+                    }
+                    setCategoryToToggle(null);
+                }}
+                onCancel={() => {
+                    setCategoryToToggle(null);
+                }}
+            />
 
             {/* Delete/Toggle Snackbar */}
             <Snackbar
